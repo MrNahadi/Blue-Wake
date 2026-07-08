@@ -45,6 +45,24 @@ else()
     target_compile_options(eexi_cii_data PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+add_library(eexi_cii_config STATIC
+    src/config/profile_settings.cpp
+)
+
+target_include_directories(eexi_cii_config
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_compile_features(eexi_cii_config PUBLIC cxx_std_17)
+target_link_libraries(eexi_cii_config PUBLIC eexi_cii_domain)
+
+if(MSVC)
+    target_compile_options(eexi_cii_config PRIVATE /W4)
+else()
+    target_compile_options(eexi_cii_config PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 add_library(eexi_cii_export STATIC
     src/export/csv_exporter.cpp
 )
@@ -73,7 +91,7 @@ target_include_directories(eexi_cii_plugin_core
 )
 
 target_compile_features(eexi_cii_plugin_core PUBLIC cxx_std_17)
-target_link_libraries(eexi_cii_plugin_core PUBLIC eexi_cii_export)
+target_link_libraries(eexi_cii_plugin_core PUBLIC eexi_cii_export eexi_cii_config)
 
 if(MSVC)
     target_compile_options(eexi_cii_plugin_core PRIVATE /W4)
@@ -90,6 +108,7 @@ if(EEXI_CII_BUILD_OPENCPN_PLUGIN)
     set_property(TARGET
         eexi_cii_domain
         eexi_cii_data
+        eexi_cii_config
         eexi_cii_export
         eexi_cii_plugin_core
         PROPERTY POSITION_INDEPENDENT_CODE ON
@@ -161,7 +180,7 @@ if(EEXI_CII_BUILD_TESTS)
         tests/data_tests.cpp
     )
 
-    target_link_libraries(eexi_cii_data_tests PRIVATE eexi_cii_export)
+    target_link_libraries(eexi_cii_data_tests PRIVATE eexi_cii_export eexi_cii_config)
     target_compile_features(eexi_cii_data_tests PRIVATE cxx_std_17)
 
     if(MSVC)

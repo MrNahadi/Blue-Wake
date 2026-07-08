@@ -1,6 +1,7 @@
 #ifndef EEXI_CII_PLUGIN_PLUGIN_CORE_H
 #define EEXI_CII_PLUGIN_PLUGIN_CORE_H
 
+#include "config/profile_settings.h"
 #include "data/accumulator.h"
 #include "data/nmea_parser.h"
 #include "domain/aer_engine.h"
@@ -41,6 +42,7 @@ public:
 
     const VesselProfile& profile() const;
     void set_profile(const VesselProfile& profile);
+    void apply_settings(const ProfileSettings& settings);
 
     double sog_threshold() const;
     void set_sog_threshold(double threshold);

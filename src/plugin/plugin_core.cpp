@@ -16,6 +16,17 @@ void PluginCore::set_profile(const VesselProfile& profile) {
     m_profile = profile;
 }
 
+void PluginCore::apply_settings(const ProfileSettings& settings) {
+    if (settings.setup_required()) {
+        throw std::invalid_argument("Vessel profile setup is required");
+    }
+
+    set_profile(settings.profile);
+    set_sog_threshold(settings.sog_threshold);
+    set_target_year_override(settings.target_year_override);
+    set_ytd_seed(settings.ytd_seed_co2_tonnes, settings.ytd_seed_distance_nm);
+}
+
 double PluginCore::sog_threshold() const {
     return m_sog_threshold;
 }

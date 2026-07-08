@@ -278,6 +278,48 @@ void plugin_core_reports_below_threshold_exclusion() {
     expect_near(result.snapshot.ytd.distance_nm, 0.0, 0.0, "Below-threshold distance");
 }
 
+void plugin_core_applies_profile_settings_to_runtime_state() {
+    eexi_cii::ProfileSettings settings;
+    settings.has_profile = true;
+    settings.profile = bulk_profile();
+    settings.profile.name = "MV Runtime";
+    settings.profile.imo_number = "1234567";
+    settings.profile.gt = 50000.0;
+    settings.profile.dwt = 90000.0;
+    settings.sog_threshold = 2.0;
+    settings.target_year_override = 2026;
+    settings.ytd_seed_co2_tonnes = 12.5;
+    settings.ytd_seed_distance_nm = 100.0;
+
+    eexi_cii::PluginCore core(bulk_profile());
+    core.apply_settings(settings);
+
+    expect_near(core.profile().dwt, 90000.0, 0.0, "Applied profile DWT");
+    expect_near(core.sog_threshold(), 2.0, 0.0, "Applied SOG threshold");
+    expect_equal(core.target_year_override(), 2026, "Applied target year");
+    expect_near(core.snapshot().ytd.co2_tonnes, 12.5, 0.0, "Applied seed CO2");
+    expect_near(core.snapshot().ytd.distance_nm, 100.0, 0.0, "Applied seed distance");
+
+    const auto result = core.process_nmea_sentence(
+        "$GPRMC,000000,A,0000.000,N,00000.000,E,001.5,000.0,010126,,*1D"
+    );
+
+    expect_status(result.status, eexi_cii::ProcessStatus::Excluded, "Applied threshold excludes");
+}
+
+void plugin_core_rejects_incomplete_profile_settings() {
+    eexi_cii::PluginCore core(bulk_profile());
+
+    bool threw = false;
+    try {
+        core.apply_settings(eexi_cii::ProfileSettings{});
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+
+    expect_true(threw, "Incomplete settings are rejected");
+}
+
 } // namespace
 
 int main() {
@@ -292,6 +334,8 @@ int main() {
         {"PluginCore ignores invalid sentences without state change", plugin_core_ignores_invalid_sentences_without_state_change},
         {"PluginCore turns RMC stream into dashboard snapshot", plugin_core_turns_rmc_stream_into_dashboard_snapshot},
         {"PluginCore reports below-threshold exclusion", plugin_core_reports_below_threshold_exclusion},
+        {"PluginCore applies Profile settings to runtime state", plugin_core_applies_profile_settings_to_runtime_state},
+        {"PluginCore rejects incomplete Profile settings", plugin_core_rejects_incomplete_profile_settings},
     };
 
     int failures = 0;

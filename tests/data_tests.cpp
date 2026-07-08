@@ -1,5 +1,6 @@
 #include "data/haversine.h"
 #include "data/nmea_parser.h"
+#include "config/profile_settings.h"
 #include "export/csv_exporter.h"
 
 #include <cmath>
@@ -9,6 +10,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <map>
 #include <vector>
 
 namespace {
@@ -59,6 +61,14 @@ void expect_equal(
     if (actual != expected) {
         std::ostringstream out;
         out << message << " expected [" << expected << "] got [" << actual << "]";
+        throw TestFailure(out.str());
+    }
+}
+
+void expect_equal(const bool actual, const bool expected, const std::string& message) {
+    if (actual != expected) {
+        std::ostringstream out;
+        out << message << " expected " << expected << " got " << actual;
         throw TestFailure(out.str());
     }
 }
@@ -204,6 +214,80 @@ void voyage_csv_exports_named_and_unassigned_records() {
     );
 }
 
+void profile_settings_round_trip_complete_vessel_profile() {
+    eexi_cii::ProfileSettings settings;
+    settings.has_profile = true;
+    settings.profile.name = "MV Profile";
+    settings.profile.imo_number = "9876543";
+    settings.profile.gt = 42000.0;
+    settings.profile.ship_type = eexi_cii::ShipType::ContainerShip;
+    settings.profile.dwt = 71000.0;
+    settings.profile.admiralty_coefficient = 645.5;
+    settings.profile.sfoc = 178.0;
+    settings.profile.fuel_type = eexi_cii::FuelType::Mdo;
+    settings.profile.displacement = 85000.0;
+    settings.profile.installed_power_mco = 11200.0;
+    settings.profile.reference_speed = 16.4;
+    settings.sog_threshold = 1.5;
+    settings.target_year_override = 2026;
+    settings.ytd_seed_co2_tonnes = 120.25;
+    settings.ytd_seed_distance_nm = 950.5;
+
+    const auto encoded = eexi_cii::encode_profile_settings(settings);
+
+    expect_equal(encoded.at("Vessel/ShipType"), "container_ship", "Encoded ship type");
+    expect_equal(encoded.at("Vessel/FuelType"), "mdo", "Encoded fuel type");
+    expect_equal(encoded.at("Vessel/ProfileConfigured"), "true", "Encoded profile flag");
+
+    const auto decoded = eexi_cii::decode_profile_settings(encoded);
+
+    expect_false(decoded.setup_required(), "Complete profile does not require setup");
+    expect_equal(decoded.has_profile, true, "Decoded profile flag");
+    expect_equal(decoded.profile.name, "MV Profile", "Decoded vessel name");
+    expect_equal(decoded.profile.imo_number, "9876543", "Decoded IMO");
+    expect_near(decoded.profile.gt, 42000.0, 0.0, "Decoded GT");
+    expect_true(
+        decoded.profile.ship_type == eexi_cii::ShipType::ContainerShip,
+        "Decoded ship type"
+    );
+    expect_near(decoded.profile.dwt, 71000.0, 0.0, "Decoded DWT");
+    expect_near(decoded.profile.admiralty_coefficient, 645.5, 0.0, "Decoded admiralty coefficient");
+    expect_near(decoded.profile.sfoc, 178.0, 0.0, "Decoded SFOC");
+    expect_true(decoded.profile.fuel_type == eexi_cii::FuelType::Mdo, "Decoded fuel type");
+    expect_near(decoded.profile.displacement, 85000.0, 0.0, "Decoded displacement");
+    expect_near(decoded.profile.installed_power_mco, 11200.0, 0.0, "Decoded MCO");
+    expect_near(decoded.profile.reference_speed, 16.4, 0.0, "Decoded reference speed");
+    expect_near(decoded.sog_threshold, 1.5, 0.0, "Decoded SOG threshold");
+    expect_equal(decoded.target_year_override, 2026, "Decoded target year");
+    expect_near(decoded.ytd_seed_co2_tonnes, 120.25, 0.0, "Decoded seed CO2");
+    expect_near(decoded.ytd_seed_distance_nm, 950.5, 0.0, "Decoded seed distance");
+}
+
+void empty_profile_settings_require_setup_and_keep_defaults() {
+    const auto settings = eexi_cii::decode_profile_settings({});
+
+    expect_true(settings.setup_required(), "Empty settings require setup");
+    expect_equal(settings.has_profile, false, "Empty settings profile flag");
+    expect_near(settings.sog_threshold, 1.0, 0.0, "Default SOG threshold");
+    expect_equal(settings.target_year_override, 0, "Default target year auto");
+    expect_near(settings.profile.sfoc, 190.0, 0.0, "Default SFOC");
+}
+
+void invalid_profile_settings_ship_type_is_rejected() {
+    eexi_cii::SettingsMap values;
+    values["Vessel/ProfileConfigured"] = "true";
+    values["Vessel/ShipType"] = "spaceship";
+
+    bool threw = false;
+    try {
+        (void)eexi_cii::decode_profile_settings(values);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+
+    expect_true(threw, "Unknown ship type is rejected");
+}
+
 } // namespace
 
 int main() {
@@ -218,6 +302,9 @@ int main() {
         {"Haversine one degree latitude is about sixty nm", haversine_one_degree_latitude_is_about_sixty_nm},
         {"Annual CSV exports YTD summary with capacity and rating", annual_csv_exports_ytd_summary_with_capacity_and_rating},
         {"Voyage CSV exports named and unassigned records", voyage_csv_exports_named_and_unassigned_records},
+        {"Profile settings round-trip complete Vessel Profile", profile_settings_round_trip_complete_vessel_profile},
+        {"Empty Profile settings require setup and keep defaults", empty_profile_settings_require_setup_and_keep_defaults},
+        {"Invalid Profile settings ship type is rejected", invalid_profile_settings_ship_type_is_rejected},
     };
 
     int failures = 0;
