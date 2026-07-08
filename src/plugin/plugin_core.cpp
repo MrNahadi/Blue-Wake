@@ -41,6 +41,18 @@ void PluginCore::set_sog_threshold(const double threshold) {
     m_sog_threshold = threshold;
 }
 
+double PluginCore::sog_outlier_limit() const {
+    return m_sog_outlier_limit;
+}
+
+void PluginCore::set_sog_outlier_limit(const double limit) {
+    if (limit <= 0.0) {
+        throw std::invalid_argument("SOG outlier limit must be greater than zero");
+    }
+
+    m_sog_outlier_limit = limit;
+}
+
 int PluginCore::target_year_override() const {
     return m_target_year_override;
 }
@@ -89,6 +101,13 @@ ProcessResult PluginCore::process_nmea_sentence(const std::string& sentence) {
     if (!rmc.valid) {
         result.status = ProcessStatus::InvalidSentence;
         result.message = "Invalid or unsupported RMC sentence";
+        result.snapshot = snapshot();
+        return result;
+    }
+
+    if (rmc.sog_knots > m_sog_outlier_limit) {
+        result.status = ProcessStatus::RejectedOutlier;
+        result.message = "Data point rejected above SOG outlier limit";
         result.snapshot = snapshot();
         return result;
     }

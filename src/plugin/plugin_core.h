@@ -16,6 +16,7 @@ enum class ProcessStatus {
     InvalidSentence,
     BaselineOnly,
     Excluded,
+    RejectedOutlier,
     Accumulated,
     Error
 };
@@ -46,6 +47,8 @@ public:
 
     double sog_threshold() const;
     void set_sog_threshold(double threshold);
+    double sog_outlier_limit() const;
+    void set_sog_outlier_limit(double limit);
 
     int target_year_override() const;
     void set_target_year_override(int year);
@@ -69,6 +72,7 @@ private:
     VesselProfile m_profile;
     Accumulator m_accumulator;
     double m_sog_threshold = 1.0;
+    double m_sog_outlier_limit = 50.0;
     int m_target_year_override = 0;
     RMCData m_last_rmc;
     FuelEstimate m_last_fuel_estimate;

@@ -278,6 +278,19 @@ void plugin_core_reports_below_threshold_exclusion() {
     expect_near(result.snapshot.ytd.distance_nm, 0.0, 0.0, "Below-threshold distance");
 }
 
+void plugin_core_discards_sog_outlier_without_updating_state() {
+    eexi_cii::PluginCore core(bulk_profile());
+
+    const auto result = core.process_nmea_sentence(
+        "$GPRMC,000000,A,0000.000,N,00000.000,E,055.0,000.0,010126,,*19"
+    );
+
+    expect_status(result.status, eexi_cii::ProcessStatus::RejectedOutlier, "SOG outlier status");
+    expect_false(result.snapshot.has_rmc, "SOG outlier does not update RMC snapshot");
+    expect_near(result.snapshot.ytd.distance_nm, 0.0, 0.0, "SOG outlier distance");
+    expect_near(result.snapshot.ytd.co2_tonnes, 0.0, 0.0, "SOG outlier CO2");
+}
+
 void plugin_core_applies_profile_settings_to_runtime_state() {
     eexi_cii::ProfileSettings settings;
     settings.has_profile = true;
@@ -355,6 +368,7 @@ int main() {
         {"PluginCore ignores invalid sentences without state change", plugin_core_ignores_invalid_sentences_without_state_change},
         {"PluginCore turns RMC stream into dashboard snapshot", plugin_core_turns_rmc_stream_into_dashboard_snapshot},
         {"PluginCore reports below-threshold exclusion", plugin_core_reports_below_threshold_exclusion},
+        {"PluginCore discards SOG outlier without updating state", plugin_core_discards_sog_outlier_without_updating_state},
         {"PluginCore applies Profile settings to runtime state", plugin_core_applies_profile_settings_to_runtime_state},
         {"PluginCore rejects incomplete Profile settings", plugin_core_rejects_incomplete_profile_settings},
         {"PluginCore serializes and restores Accumulator state", plugin_core_serializes_and_restores_accumulator_state},
