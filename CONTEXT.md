@@ -11,7 +11,7 @@ The single vessel running OpenCPN with this plugin installed. The only vessel th
 _Avoid_: target, AIS target, tracked vessel
 
 **Ship Type**:
-One of the 14 IMO-defined vessel categories, each with distinct CII reference line coefficients (a, c) and rating boundaries. Selected by the user during vessel profile setup. Ship types using AER (DWT-based): bulk carrier, gas carrier (≥/< 65k DWT), tanker, container ship, general cargo, refrigerated cargo carrier, combination carrier, LNG carrier (≥/< 100k DWT). Ship types using cgDIST (GT-based): ro-ro cargo ship (vehicle carrier), ro-ro cargo ship, ro-ro passenger ship, cruise passenger ship.
+One of the IMO-defined CII ship type entries, with size brackets where the IMO reference table requires them. Each entry has CII reference line coefficients (a, c), rating boundaries, and in some cases a reference-capacity cap or floor. Selected by the user during vessel profile setup. Ship types using AER (DWT-based): bulk carrier, gas carrier (≥/< 65k DWT), tanker, container ship, general cargo (≥/< 20k DWT), refrigerated cargo carrier, combination carrier, LNG carrier (≥100k DWT, 65k-100k DWT, <65k DWT). Ship types using cgDIST (GT-based): ro-ro cargo ship (vehicle carrier, with GT brackets), ro-ro cargo ship, ro-ro passenger ship, cruise passenger ship.
 _Avoid_: vessel category, class
 
 **GT (Gross Tonnage)**:

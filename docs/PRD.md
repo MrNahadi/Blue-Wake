@@ -105,7 +105,7 @@ The plugin provides a dashboard showing live SOG, instantaneous CO₂ rate, curr
 1. **Domain modules** (pure C++, zero external dependencies):
    - Fuel Estimator: Admiralty formula → shaft power → fuel rate → CO₂ rate. Pure function, no state.
    - AER Engine: Computes AER or cgDIST from accumulated totals; determines CII rating by comparing against Rating Band boundaries for the Ship Type and year.
-   - CII Reference Data: Lookup tables for all 14 Ship Type categories — reference line coefficients (a, c), rating boundary vectors (d1–d4), and Reduction Factor table (Z% for 2023–2030+).
+   - CII Reference Data: Lookup tables for the modeled IMO Ship Type entries — reference line coefficients (a, c), rating boundary vectors (d1–d4), reference-capacity caps/floors where applicable, and Reduction Factor table values.
    - EEXI Calculator: One-shot simplified EEXI computation from Vessel Profile.
 
 2. **Data modules** (minimal dependencies):
@@ -173,7 +173,7 @@ All business logic is tested through the domain module interfaces as pure functi
 | AER Engine | Accumulated CO₂ + distance + Vessel Profile + year | AER value, CII rating (A–E), band boundaries | IMO MEPC.354(78) worked examples |
 | AER Engine — boundary cases | AER at exactly each d-vector boundary | Correct rating assignment | Rating boundary vectors |
 | AER Engine — cgDIST | GT-based ship type | cgDIST value instead of AER | Formula verification |
-| CII Reference Data | Each of 14 Ship Types | Correct a, c, d1–d4 coefficients | MEPC.353(78) and MEPC.354(78) tables |
+| CII Reference Data | Each modeled Ship Type entry and size bracket | Correct a, c, d1–d4 coefficients and reference capacity | MEPC.353(78) and MEPC.354(78) tables |
 | Reduction Factor | Confirmed years 2023-2026 | Correct Z% values | MEPC.338(76) table |
 | EEXI Calculator | MCO, V_ref, DWT, SFOC, C_F | Attained EEXI, pass/fail | Hand calculation |
 | Emission Factor | Each fuel type | Correct C_F value | MEPC.364(79) |

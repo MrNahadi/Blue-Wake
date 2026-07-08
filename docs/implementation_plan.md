@@ -205,7 +205,7 @@ struct VesselProfile {
 ```
 
 #### [NEW] src/domain/cii_reference.h / cii_reference.cpp
-IMO lookup tables — all 14 ship types:
+IMO lookup tables — modeled ship type entries and size brackets:
 
 ```cpp
 #ifndef _CII_REFERENCE_H_
@@ -219,8 +219,11 @@ struct CIICoefficients {
     double d1, d2, d3, d4;  // Rating boundary exp-vectors
 };
 
-// Lookup coefficients for a ship type
-CIICoefficients cii_coefficients(ShipType type);
+// Lookup coefficients for a ship type and capacity bracket
+CIICoefficients cii_coefficients(ShipType type, double capacity);
+
+// Reference-line capacity, including IMO caps/floors such as 279,000 DWT for large bulk carriers
+double cii_reference_capacity(ShipType type, double capacity);
 
 // Reduction factor Z% for a given year
 double reduction_factor_z(int year);
@@ -252,13 +255,9 @@ static const std::map<int, double> Z_TABLE = {
     {2023, 5.0},  {2024, 7.0},   {2025, 9.0},   {2026, 11.0}
 };
 
-// Reference line coefficients per ship type
-// CII_ref = a * capacity^(-c)
-static const CIICoefficients COEFFICIENTS[] = {
-    /* BULK_CARRIER */          {4745.0,   0.622, ...},
-    /* GAS_CARRIER_GTE_65K */   {14405.0,  0.901, ...},
-    // ... all 14 types
-};
+// Reference line coefficients per ship type/bracket
+// CII_ref = a * reference_capacity^(-c)
+// Data must be copied from MEPC.353(78) and MEPC.354(78), not inferred from approximate text.
 ```
 
 #### [NEW] src/domain/fuel_estimator.h / fuel_estimator.cpp
@@ -739,7 +738,7 @@ Tabbed wxDialog with three tabs:
 **Tab 1 — Vessel Profile:**
 - wxTextCtrl: Ship Name, IMO Number
 - wxSpinCtrlDouble: GT, DWT, Admiralty Coefficient (with Ship Type default hint), SFOC (default 190.0), Displacement
-- wxChoice: Ship Type (14 items), Fuel Type (5 items)
+- wxChoice: Ship Type entries/brackets, Fuel Type (5 items)
 - On Ship Type change: show default Admiralty Coefficient range hint, toggle DWT/GT label
 
 **Tab 2 — EEXI:**

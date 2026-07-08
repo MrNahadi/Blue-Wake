@@ -106,4 +106,19 @@ if(EEXI_CII_BUILD_TESTS)
     endif()
 
     add_test(NAME eexi_cii_accumulator_tests COMMAND eexi_cii_accumulator_tests)
+
+    add_executable(eexi_cii_pipeline_tests
+        tests/pipeline_tests.cpp
+    )
+
+    target_link_libraries(eexi_cii_pipeline_tests PRIVATE eexi_cii_data)
+    target_compile_features(eexi_cii_pipeline_tests PRIVATE cxx_std_17)
+
+    if(MSVC)
+        target_compile_options(eexi_cii_pipeline_tests PRIVATE /W4)
+    else()
+        target_compile_options(eexi_cii_pipeline_tests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+
+    add_test(NAME eexi_cii_pipeline_tests COMMAND eexi_cii_pipeline_tests)
 endif()

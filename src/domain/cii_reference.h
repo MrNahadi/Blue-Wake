@@ -21,7 +21,8 @@ struct RatingBoundaries {
     double de = 0.0;
 };
 
-CIICoefficients cii_coefficients(ShipType type);
+CIICoefficients cii_coefficients(ShipType type, double capacity);
+double cii_reference_capacity(ShipType type, double capacity);
 double reduction_factor_z(int year);
 double required_cii(ShipType type, double capacity, int year);
 RatingBoundaries rating_boundaries(ShipType type, double capacity, int year);
