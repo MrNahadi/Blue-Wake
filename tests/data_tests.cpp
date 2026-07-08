@@ -1,5 +1,6 @@
 #include "data/haversine.h"
 #include "data/nmea_parser.h"
+#include "export/csv_exporter.h"
 
 #include <cmath>
 #include <exception>
@@ -46,6 +47,18 @@ void expect_equal(const int actual, const int expected, const std::string& messa
     if (actual != expected) {
         std::ostringstream out;
         out << message << " expected " << expected << " got " << actual;
+        throw TestFailure(out.str());
+    }
+}
+
+void expect_equal(
+    const std::string& actual,
+    const std::string& expected,
+    const std::string& message
+) {
+    if (actual != expected) {
+        std::ostringstream out;
+        out << message << " expected [" << expected << "] got [" << actual << "]";
         throw TestFailure(out.str());
     }
 }
@@ -129,6 +142,68 @@ void haversine_one_degree_latitude_is_about_sixty_nm() {
     );
 }
 
+void annual_csv_exports_ytd_summary_with_capacity_and_rating() {
+    eexi_cii::VesselProfile profile;
+    profile.name = "MV Example, One";
+    profile.imo_number = "1234567";
+    profile.ship_type = eexi_cii::ShipType::BulkCarrier;
+    profile.dwt = 80000.0;
+
+    eexi_cii::YTDState ytd;
+    ytd.year = 2026;
+    ytd.distance_nm = 48210.25;
+    ytd.co2_tonnes = 12847.5;
+
+    eexi_cii::AERResult result;
+    result.aer = 3.330123;
+    result.rating = 'B';
+    result.required_cii = 3.766208;
+
+    const std::string csv = eexi_cii::export_annual_csv(ytd, profile, result);
+
+    expect_equal(
+        csv,
+        "Year,Ship Name,IMO Number,Ship Type,Capacity Type,Capacity,Total Distance (nm),"
+        "Total CO2 (tonnes),AER or cgDIST,CII Rating,Required CII\n"
+        "2026,\"MV Example, One\",1234567,Bulk Carrier,DWT,80000,48210.25,12847.5,3.330123,B,3.766208\n",
+        "Annual CSV"
+    );
+}
+
+void voyage_csv_exports_named_and_unassigned_records() {
+    std::vector<eexi_cii::VoyageRecord> records;
+    records.push_back(eexi_cii::VoyageRecord{
+        "Rotterdam-Singapore",
+        1768464000,
+        1770916200,
+        92000.0,
+        4892.25,
+        1247.5,
+        3.19,
+        false
+    });
+    records.push_back(eexi_cii::VoyageRecord{
+        "",
+        1770916200,
+        1771155600,
+        92000.0,
+        3.2,
+        0.8,
+        0.0,
+        true
+    });
+
+    const std::string csv = eexi_cii::export_voyage_csv(records);
+
+    expect_equal(
+        csv,
+        "Voyage,Start,End,Displacement,Distance (nm),CO2 (tonnes),AER,Type\n"
+        "Rotterdam-Singapore,2026-01-15T08:00:00Z,2026-02-12T17:10:00Z,92000,4892.25,1247.5,3.19,Named\n"
+        "Unassigned,2026-02-12T17:10:00Z,2026-02-15T11:40:00Z,92000,3.2,0.8,0,Unassigned\n",
+        "Voyage CSV"
+    );
+}
+
 } // namespace
 
 int main() {
@@ -141,6 +216,8 @@ int main() {
         {"Empty SOG is rejected without becoming zero", empty_sog_is_rejected_without_becoming_zero},
         {"Haversine returns zero for same position", haversine_returns_zero_for_same_position},
         {"Haversine one degree latitude is about sixty nm", haversine_one_degree_latitude_is_about_sixty_nm},
+        {"Annual CSV exports YTD summary with capacity and rating", annual_csv_exports_ytd_summary_with_capacity_and_rating},
+        {"Voyage CSV exports named and unassigned records", voyage_csv_exports_named_and_unassigned_records},
     };
 
     int failures = 0;

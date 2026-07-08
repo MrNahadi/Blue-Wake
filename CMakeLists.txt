@@ -44,6 +44,24 @@ else()
     target_compile_options(eexi_cii_data PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+add_library(eexi_cii_export STATIC
+    src/export/csv_exporter.cpp
+)
+
+target_include_directories(eexi_cii_export
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_compile_features(eexi_cii_export PUBLIC cxx_std_17)
+target_link_libraries(eexi_cii_export PUBLIC eexi_cii_data)
+
+if(MSVC)
+    target_compile_options(eexi_cii_export PRIVATE /W4)
+else()
+    target_compile_options(eexi_cii_export PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 include(CTest)
 
 if(EEXI_CII_BUILD_TESTS)
@@ -81,7 +99,7 @@ if(EEXI_CII_BUILD_TESTS)
         tests/data_tests.cpp
     )
 
-    target_link_libraries(eexi_cii_data_tests PRIVATE eexi_cii_data)
+    target_link_libraries(eexi_cii_data_tests PRIVATE eexi_cii_export)
     target_compile_features(eexi_cii_data_tests PRIVATE cxx_std_17)
 
     if(MSVC)

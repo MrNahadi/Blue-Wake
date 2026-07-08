@@ -818,20 +818,15 @@ Custom-drawn wxPanel using `wxGraphicsContext`:
 #include "domain/vessel_profile.h"
 #include <string>
 
-// Export annual summary CSV
-void export_annual_csv(
-    const std::string& filepath,
+// Build annual summary CSV text. UI/file layer writes it to disk.
+std::string export_annual_csv(
     const YTDState& ytd,
     const VesselProfile& profile,
-    char cii_rating,
-    double required_cii
+    const AERResult& aer_result
 );
 
-// Export per-voyage breakdown CSV
-void export_voyage_csv(
-    const std::string& filepath,
-    const std::vector<VoyageRecord>& records
-);
+// Build per-voyage breakdown CSV text. UI/file layer writes it to disk.
+std::string export_voyage_csv(const std::vector<VoyageRecord>& records);
 
 #endif
 ```
@@ -850,7 +845,7 @@ Unassigned,2026-02-12T14:30:00,2026-02-15T09:00:00,92000,3.2,0.8,—,Unassigned
 ```
 
 #### [MODIFY] src/ui/dashboard_panel.cpp
-Wire Export CSV button to `wxFileDialog` → `export_annual_csv()` / `export_voyage_csv()`.
+Wire Export CSV button to `wxFileDialog` -> `export_annual_csv()` / `export_voyage_csv()` -> file write.
 
 #### [NEW] src/ui/history_dialog.h / history_dialog.cpp
 wxDialog showing:
