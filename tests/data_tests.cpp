@@ -2,8 +2,10 @@
 #include "data/nmea_parser.h"
 #include "config/profile_settings.h"
 #include "export/csv_exporter.h"
+#include "data/persistence.h"
 
 #include <cmath>
+#include <cstdio>
 #include <exception>
 #include <functional>
 #include <iostream>
@@ -46,6 +48,18 @@ void expect_near(
 }
 
 void expect_equal(const int actual, const int expected, const std::string& message) {
+    if (actual != expected) {
+        std::ostringstream out;
+        out << message << " expected " << expected << " got " << actual;
+        throw TestFailure(out.str());
+    }
+}
+
+void expect_equal_size(
+    const std::size_t actual,
+    const std::size_t expected,
+    const std::string& message
+) {
     if (actual != expected) {
         std::ostringstream out;
         out << message << " expected " << expected << " got " << actual;
@@ -288,6 +302,93 @@ void invalid_profile_settings_ship_type_is_rejected() {
     expect_true(threw, "Unknown ship type is rejected");
 }
 
+eexi_cii::RMCData persistence_fix(
+    const int hour,
+    const double latitude,
+    const double longitude,
+    const double sog,
+    const int year = 2026
+) {
+    eexi_cii::RMCData rmc;
+    rmc.valid = true;
+    rmc.utc_seconds = hour * 3600.0;
+    rmc.latitude = latitude;
+    rmc.longitude = longitude;
+    rmc.sog_knots = sog;
+    rmc.day = 1;
+    rmc.month = 1;
+    rmc.year = year;
+    return rmc;
+}
+
+eexi_cii::FuelEstimate persistence_estimate(const double co2_rate) {
+    eexi_cii::FuelEstimate estimate;
+    estimate.co2_rate_tonnes_hr = co2_rate;
+    return estimate;
+}
+
+eexi_cii::VesselProfile persistence_profile() {
+    eexi_cii::VesselProfile profile;
+    profile.name = "MV Persistence";
+    profile.imo_number = "7654321";
+    profile.ship_type = eexi_cii::ShipType::BulkCarrier;
+    profile.gt = 50000.0;
+    profile.dwt = 80000.0;
+    profile.displacement = 90000.0;
+    profile.admiralty_coefficient = 680.0;
+    profile.sfoc = 175.0;
+    profile.fuel_type = eexi_cii::FuelType::Hfo;
+    return profile;
+}
+
+void accumulator_json_round_trip_preserves_state_and_continues_from_last_fix() {
+    eexi_cii::Accumulator accumulator;
+    accumulator.set_ytd_seed(10.0, 100.0);
+    accumulator.add_data_point(persistence_fix(0, 0.0, 0.0, 12.0), persistence_estimate(2.0));
+    accumulator.start_voyage("Saved Voyage", 90000.0);
+    accumulator.add_data_point(persistence_fix(1, 1.0, 0.0, 12.0), persistence_estimate(2.0));
+    accumulator.end_voyage(persistence_profile(), 2026);
+    accumulator.check_year_rollover(2027, persistence_profile());
+    accumulator.start_voyage("Current Voyage", 91000.0);
+    accumulator.add_data_point(persistence_fix(2, 2.0, 0.0, 12.0, 2027), persistence_estimate(2.0));
+
+    const std::string json = eexi_cii::serialize_accumulator(accumulator);
+    const eexi_cii::Accumulator restored = eexi_cii::deserialize_accumulator(json);
+
+    expect_equal(restored.year_to_date().year, 2027, "Restored YTD year");
+    expect_equal_size(restored.archived_years().size(), 1, "Restored archived years");
+    expect_equal(restored.archived_years()[0].year, 2026, "Restored archived year value");
+    expect_equal_size(restored.voyage_history().size(), 1, "Restored voyage history");
+    expect_equal(restored.voyage_history()[0].name, "Saved Voyage", "Restored voyage name");
+    expect_true(restored.has_active_voyage(), "Restored active voyage");
+    expect_equal(restored.current_voyage().name, "Current Voyage", "Restored active voyage name");
+
+    eexi_cii::Accumulator continued = restored;
+    const bool accumulated = continued.add_data_point(
+        persistence_fix(3, 3.0, 0.0, 12.0, 2027),
+        persistence_estimate(2.0)
+    );
+
+    expect_true(accumulated, "Restored accumulator continues from saved last fix");
+    expect_near(continued.year_to_date().distance_nm, 60.040460733, 0.000001, "Continued distance");
+    expect_near(continued.year_to_date().co2_tonnes, 2.0, 0.000001, "Continued CO2");
+    expect_near(continued.current_voyage().distance_nm, 60.040460733, 0.000001, "Continued voyage distance");
+}
+
+void accumulator_file_round_trip_preserves_ytd_seed() {
+    const std::string filepath = "eexi_cii_accumulator_test.json";
+
+    eexi_cii::Accumulator accumulator;
+    accumulator.set_ytd_seed(42.0, 240.0);
+
+    eexi_cii::save_accumulator(filepath, accumulator);
+    const eexi_cii::Accumulator restored = eexi_cii::load_accumulator(filepath);
+    std::remove(filepath.c_str());
+
+    expect_near(restored.year_to_date().co2_tonnes, 42.0, 0.0, "File restored CO2 seed");
+    expect_near(restored.year_to_date().distance_nm, 240.0, 0.0, "File restored distance seed");
+}
+
 } // namespace
 
 int main() {
@@ -305,6 +406,8 @@ int main() {
         {"Profile settings round-trip complete Vessel Profile", profile_settings_round_trip_complete_vessel_profile},
         {"Empty Profile settings require setup and keep defaults", empty_profile_settings_require_setup_and_keep_defaults},
         {"Invalid Profile settings ship type is rejected", invalid_profile_settings_ship_type_is_rejected},
+        {"Accumulator JSON round-trip preserves state and continues from last fix", accumulator_json_round_trip_preserves_state_and_continues_from_last_fix},
+        {"Accumulator file round-trip preserves YTD seed", accumulator_file_round_trip_preserves_ytd_seed},
     };
 
     int failures = 0;

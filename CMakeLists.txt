@@ -29,6 +29,7 @@ add_library(eexi_cii_data STATIC
     src/data/accumulator.cpp
     src/data/haversine.cpp
     src/data/nmea_parser.cpp
+    src/data/persistence.cpp
 )
 
 target_include_directories(eexi_cii_data
@@ -38,6 +39,10 @@ target_include_directories(eexi_cii_data
 
 target_compile_features(eexi_cii_data PUBLIC cxx_std_17)
 target_link_libraries(eexi_cii_data PUBLIC eexi_cii_domain)
+target_include_directories(eexi_cii_data
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/opencpn-libs/json-schema-validator
+)
 
 if(MSVC)
     target_compile_options(eexi_cii_data PRIVATE /W4)

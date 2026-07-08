@@ -41,6 +41,17 @@ struct YTDState {
     double seed_co2_tonnes = 0.0;
 };
 
+struct AccumulatorState {
+    VoyageState current_voyage;
+    YTDState ytd;
+    RMCData last_fix;
+    std::int64_t last_timestamp = 0;
+    bool has_last_fix = false;
+    bool last_fix_can_accumulate = false;
+    std::vector<VoyageRecord> history;
+    std::vector<YTDState> archived_years;
+};
+
 class Accumulator {
 public:
     void start_voyage(const std::string& name, double displacement);
@@ -60,6 +71,8 @@ public:
     YTDState year_to_date() const;
     const std::vector<VoyageRecord>& voyage_history() const;
     const std::vector<YTDState>& archived_years() const;
+    AccumulatorState state() const;
+    void restore_state(const AccumulatorState& state);
 
 private:
     VoyageState m_current_voyage;

@@ -190,4 +190,28 @@ const std::vector<YTDState>& Accumulator::archived_years() const {
     return m_archived_years;
 }
 
+AccumulatorState Accumulator::state() const {
+    return AccumulatorState{
+        m_current_voyage,
+        m_ytd,
+        m_last_fix,
+        m_last_timestamp,
+        m_has_last_fix,
+        m_last_fix_can_accumulate,
+        m_history,
+        m_archived_years
+    };
+}
+
+void Accumulator::restore_state(const AccumulatorState& state) {
+    m_current_voyage = state.current_voyage;
+    m_ytd = state.ytd;
+    m_last_fix = state.last_fix;
+    m_last_timestamp = state.last_timestamp;
+    m_has_last_fix = state.has_last_fix;
+    m_last_fix_can_accumulate = state.last_fix_can_accumulate;
+    m_history = state.history;
+    m_archived_years = state.archived_years;
+}
+
 } // namespace eexi_cii
