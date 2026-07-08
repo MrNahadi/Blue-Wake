@@ -84,6 +84,10 @@ eexi_cii::VesselProfile bulk_profile() {
     eexi_cii::VesselProfile profile;
     profile.ship_type = eexi_cii::ShipType::BulkCarrier;
     profile.dwt = 80000.0;
+    profile.displacement = 90000.0;
+    profile.admiralty_coefficient = 680.0;
+    profile.sfoc = 175.0;
+    profile.fuel_type = eexi_cii::FuelType::Hfo;
     return profile;
 }
 
@@ -182,6 +186,39 @@ void year_rollover_archives_and_resets_ytd_state() {
     expect_equal(accumulator.archived_years()[0].year, 2026, "Archived year");
 }
 
+void rmc_to_running_aer_pipeline_produces_expected_result() {
+    const eexi_cii::VesselProfile profile = bulk_profile();
+    eexi_cii::Accumulator accumulator;
+
+    const auto first = eexi_cii::parse_rmc(
+        "$GPRMC,000000,A,0000.000,N,00000.000,E,012.0,000.0,010126,,*1A"
+    );
+    const auto second = eexi_cii::parse_rmc(
+        "$GPRMC,010000,A,0100.000,N,00000.000,E,012.0,000.0,010126,,*1A"
+    );
+
+    expect_true(first.valid, "First RMC parses");
+    expect_true(second.valid, "Second RMC parses");
+
+    accumulator.add_data_point(first, eexi_cii::estimate_fuel(first.sog_knots, profile));
+    const bool accumulated =
+        accumulator.add_data_point(second, eexi_cii::estimate_fuel(second.sog_knots, profile));
+
+    expect_true(accumulated, "Second fix accumulates");
+    expect_near(accumulator.year_to_date().distance_nm, 60.040460733, 0.000001, "Pipeline distance");
+    expect_near(accumulator.year_to_date().co2_tonnes, 2.781120600, 0.000001, "Pipeline CO2");
+
+    const auto result = eexi_cii::compute_aer(
+        accumulator.year_to_date().co2_tonnes,
+        accumulator.year_to_date().distance_nm,
+        profile,
+        accumulator.year_to_date().year
+    );
+
+    expect_near(result.aer, 0.579009672, 0.000001, "Pipeline running AER");
+    expect_true(result.rating == 'A', "Pipeline CII rating");
+}
+
 } // namespace
 
 int main() {
@@ -192,6 +229,7 @@ int main() {
         {"YTD seed is included once and can be replaced", ytd_seed_is_included_once_and_can_be_replaced},
         {"Active Voyage receives accumulated totals and creates record", active_voyage_receives_accumulated_totals_and_creates_record},
         {"Year rollover archives and resets YTD state", year_rollover_archives_and_resets_ytd_state},
+        {"RMC to running AER pipeline produces expected result", rmc_to_running_aer_pipeline_produces_expected_result},
     };
 
     int failures = 0;
