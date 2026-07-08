@@ -661,27 +661,14 @@ void eexi_cii_pi::SetNMEASentence(wxString& sentence) {
 }
 
 void eexi_cii_pi::ProcessNMEA(const std::string& sentence) {
-    // 1. Parse
-    RMCData rmc = parse_rmc(sentence);
-    if (!rmc.valid || rmc.sog_knots < 0) return;
+    ProcessResult result = m_plugin_core.process_nmea_sentence(sentence);
+    if (result.status == ProcessStatus::InvalidSentence ||
+        result.status == ProcessStatus::Error) {
+        return;
+    }
 
-    // 2. Estimate fuel
-    FuelEstimate est = estimate_fuel(rmc.sog_knots, m_profile);
-
-    // 3. Accumulate
-    m_accumulator.add_data_point(rmc, est);
-
-    // 4. Compute AER & rating
-    auto ytd = m_accumulator.year_to_date();
-    AERResult aer = compute_aer(
-        ytd.co2_tonnes, ytd.distance_nm,
-        m_profile, ytd.year
-    );
-
-    // 5. Update dashboard (Phase 4)
     if (m_dashboard_panel) {
-        m_dashboard_panel->Update(rmc, est, aer,
-            m_accumulator.current_voyage(), ytd);
+        m_dashboard_panel->Update(result.snapshot);
     }
 }
 ```

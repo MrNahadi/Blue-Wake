@@ -62,6 +62,24 @@ else()
     target_compile_options(eexi_cii_export PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+add_library(eexi_cii_plugin_core STATIC
+    src/plugin/plugin_core.cpp
+)
+
+target_include_directories(eexi_cii_plugin_core
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_compile_features(eexi_cii_plugin_core PUBLIC cxx_std_17)
+target_link_libraries(eexi_cii_plugin_core PUBLIC eexi_cii_export)
+
+if(MSVC)
+    target_compile_options(eexi_cii_plugin_core PRIVATE /W4)
+else()
+    target_compile_options(eexi_cii_plugin_core PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 include(CTest)
 
 if(EEXI_CII_BUILD_TESTS)
@@ -114,7 +132,7 @@ if(EEXI_CII_BUILD_TESTS)
         tests/accumulator_tests.cpp
     )
 
-    target_link_libraries(eexi_cii_accumulator_tests PRIVATE eexi_cii_data)
+    target_link_libraries(eexi_cii_accumulator_tests PRIVATE eexi_cii_plugin_core)
     target_compile_features(eexi_cii_accumulator_tests PRIVATE cxx_std_17)
 
     if(MSVC)

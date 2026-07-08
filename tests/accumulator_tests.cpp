@@ -1,4 +1,5 @@
 #include "data/accumulator.h"
+#include "plugin/plugin_core.h"
 
 #include <cmath>
 #include <exception>
@@ -39,6 +40,19 @@ void expect_equal_size(std::size_t actual, std::size_t expected, const std::stri
     if (actual != expected) {
         std::ostringstream out;
         out << message << " expected " << expected << " got " << actual;
+        throw TestFailure(out.str());
+    }
+}
+
+void expect_status(
+    eexi_cii::ProcessStatus actual,
+    eexi_cii::ProcessStatus expected,
+    const std::string& message
+) {
+    if (actual != expected) {
+        std::ostringstream out;
+        out << message << " expected status " << static_cast<int>(expected)
+            << " got " << static_cast<int>(actual);
         throw TestFailure(out.str());
     }
 }
@@ -219,6 +233,51 @@ void rmc_to_running_aer_pipeline_produces_expected_result() {
     expect_true(result.rating == 'A', "Pipeline CII rating");
 }
 
+void plugin_core_ignores_invalid_sentences_without_state_change() {
+    eexi_cii::PluginCore core(bulk_profile());
+
+    const auto result = core.process_nmea_sentence("$GPRMC,bad*00");
+
+    expect_status(result.status, eexi_cii::ProcessStatus::InvalidSentence, "Invalid sentence status");
+    expect_false(result.snapshot.has_rmc, "Invalid sentence does not create RMC snapshot");
+    expect_false(result.snapshot.has_aer, "Invalid sentence does not create AER snapshot");
+}
+
+void plugin_core_turns_rmc_stream_into_dashboard_snapshot() {
+    eexi_cii::PluginCore core(bulk_profile());
+
+    const auto first = core.process_nmea_sentence(
+        "$GPRMC,000000,A,0000.000,N,00000.000,E,012.0,000.0,010126,,*1A"
+    );
+    const auto second = core.process_nmea_sentence(
+        "$GPRMC,010000,A,0100.000,N,00000.000,E,012.0,000.0,010126,,*1A"
+    );
+
+    expect_status(first.status, eexi_cii::ProcessStatus::BaselineOnly, "First plugin point");
+    expect_true(first.snapshot.has_rmc, "First point has RMC snapshot");
+    expect_false(first.snapshot.has_aer, "First point has no AER yet");
+
+    expect_status(second.status, eexi_cii::ProcessStatus::Accumulated, "Second plugin point");
+    expect_true(second.snapshot.has_aer, "Second point has AER snapshot");
+    expect_near(second.snapshot.ytd.distance_nm, 60.040460733, 0.000001, "Plugin snapshot distance");
+    expect_near(second.snapshot.ytd.co2_tonnes, 2.781120600, 0.000001, "Plugin snapshot CO2");
+    expect_near(second.snapshot.aer_result.aer, 0.579009672, 0.000001, "Plugin snapshot AER");
+    expect_true(second.snapshot.aer_result.rating == 'A', "Plugin snapshot rating");
+}
+
+void plugin_core_reports_below_threshold_exclusion() {
+    eexi_cii::PluginCore core(bulk_profile());
+
+    const auto result = core.process_nmea_sentence(
+        "$GPRMC,000000,A,0000.000,N,00000.000,E,000.5,000.0,010126,,*1C"
+    );
+
+    expect_status(result.status, eexi_cii::ProcessStatus::Excluded, "Below-threshold status");
+    expect_true(result.snapshot.has_rmc, "Below-threshold point has RMC snapshot");
+    expect_false(result.snapshot.has_aer, "Below-threshold point has no AER snapshot");
+    expect_near(result.snapshot.ytd.distance_nm, 0.0, 0.0, "Below-threshold distance");
+}
+
 } // namespace
 
 int main() {
@@ -230,6 +289,9 @@ int main() {
         {"Active Voyage receives accumulated totals and creates record", active_voyage_receives_accumulated_totals_and_creates_record},
         {"Year rollover archives and resets YTD state", year_rollover_archives_and_resets_ytd_state},
         {"RMC to running AER pipeline produces expected result", rmc_to_running_aer_pipeline_produces_expected_result},
+        {"PluginCore ignores invalid sentences without state change", plugin_core_ignores_invalid_sentences_without_state_change},
+        {"PluginCore turns RMC stream into dashboard snapshot", plugin_core_turns_rmc_stream_into_dashboard_snapshot},
+        {"PluginCore reports below-threshold exclusion", plugin_core_reports_below_threshold_exclusion},
     };
 
     int failures = 0;

@@ -114,7 +114,7 @@ The plugin provides a dashboard showing live SOG, instantaneous CO₂ rate, curr
    - Accumulator: Stateful. Receives parsed data points + fuel estimates, accumulates CO₂ and distance per voyage and YTD. Manages voyage start/end, unassigned periods, SOG threshold filtering, YTD Seed, and calendar year rollover.
    - Persistence: JSON read/write for Accumulator state and Voyage Records. wxFileConfig for Vessel Profile settings (follows OpenCPN convention). Auto-save every 5 minutes via wxTimer. Data stored in plugin-private directory via `GetpPrivateApplicationDataLocation()`.
 
-3. **Plugin entry point**: Implements the `opencpn_plugin` interface. Wires `SetNMEASentence()` callback (registered via `WANTS_NMEA_SENTENCES` capability flag) to the NMEA parser → fuel estimator → accumulator → dashboard update chain. All processing is synchronous on the main GUI thread (microseconds per sentence).
+3. **Plugin entry point**: Implements the `opencpn_plugin` interface. Wires `SetNMEASentence()` callback (registered via `WANTS_NMEA_SENTENCES` capability flag) to the pure C++ `PluginCore`, which owns the NMEA parser -> fuel estimator -> accumulator -> AER engine chain. All processing is synchronous on the main GUI thread (microseconds per sentence).
 
 4. **UI modules** (wxWidgets):
    - Setup Dialog: Tabbed dialog (Vessel Profile, EEXI, Advanced Settings). Opened from plugin preferences or on first launch.
@@ -126,7 +126,7 @@ The plugin provides a dashboard showing live SOG, instantaneous CO₂ rate, curr
 ### Data Flow (per NMEA sentence)
 
 ```
-SetNMEASentence() → NMEAParser → FuelEstimator → Accumulator → AEREngine → DashboardPanel
+SetNMEASentence() -> PluginCore -> NMEAParser -> FuelEstimator -> Accumulator -> AEREngine -> DashboardPanel
 ```
 
 Each step is a function call on the main thread. No worker threads needed.
