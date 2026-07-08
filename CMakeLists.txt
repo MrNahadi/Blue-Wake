@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 project(eexi_cii_pi VERSION 0.1.0 LANGUAGES CXX)
 
 option(EEXI_CII_BUILD_TESTS "Build EEXI-CII unit tests" ON)
+option(EEXI_CII_BUILD_OPENCPN_PLUGIN "Build the OpenCPN plugin wrapper" OFF)
 
 add_library(eexi_cii_domain STATIC
     src/domain/aer_engine.cpp
@@ -78,6 +79,49 @@ if(MSVC)
     target_compile_options(eexi_cii_plugin_core PRIVATE /W4)
 else()
     target_compile_options(eexi_cii_plugin_core PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(EEXI_CII_BUILD_OPENCPN_PLUGIN)
+    find_package(wxWidgets REQUIRED COMPONENTS base core)
+    include(${wxWidgets_USE_FILE})
+
+    add_subdirectory(opencpn-libs/api-21)
+
+    set_property(TARGET
+        eexi_cii_domain
+        eexi_cii_data
+        eexi_cii_export
+        eexi_cii_plugin_core
+        PROPERTY POSITION_INDEPENDENT_CODE ON
+    )
+
+    add_library(eexi_cii_pi MODULE
+        src/opencpn/eexi_cii_pi.cpp
+    )
+
+    target_include_directories(eexi_cii_pi
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+
+    target_compile_features(eexi_cii_pi PRIVATE cxx_std_17)
+    target_compile_definitions(eexi_cii_pi PRIVATE MAKING_PLUGIN)
+    target_link_libraries(eexi_cii_pi
+        PRIVATE
+            eexi_cii_plugin_core
+            ocpn::api
+            ${wxWidgets_LIBRARIES}
+    )
+
+    set_target_properties(eexi_cii_pi PROPERTIES
+        PREFIX ""
+    )
+
+    if(MSVC)
+        target_compile_options(eexi_cii_pi PRIVATE /W4)
+    else()
+        target_compile_options(eexi_cii_pi PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
 endif()
 
 include(CTest)
