@@ -1,5 +1,7 @@
 #include "plugin/plugin_core.h"
 
+#include "data/persistence.h"
+
 #include <stdexcept>
 #include <utility>
 
@@ -62,6 +64,22 @@ void PluginCore::start_voyage(const std::string& name, const double displacement
 void PluginCore::end_voyage() {
     const YTDState ytd = m_accumulator.year_to_date();
     m_accumulator.end_voyage(m_profile, rating_year(ytd));
+}
+
+std::string PluginCore::serialize_accumulator_json() const {
+    return serialize_accumulator(m_accumulator);
+}
+
+void PluginCore::restore_accumulator_json(const std::string& json) {
+    m_accumulator = deserialize_accumulator(json);
+}
+
+void PluginCore::save_accumulator_json(const std::string& filepath) const {
+    save_accumulator(filepath, m_accumulator);
+}
+
+void PluginCore::load_accumulator_json(const std::string& filepath) {
+    m_accumulator = load_accumulator(filepath);
 }
 
 ProcessResult PluginCore::process_nmea_sentence(const std::string& sentence) {

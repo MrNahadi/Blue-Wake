@@ -54,6 +54,11 @@ public:
     void start_voyage(const std::string& name, double displacement);
     void end_voyage();
 
+    std::string serialize_accumulator_json() const;
+    void restore_accumulator_json(const std::string& json);
+    void save_accumulator_json(const std::string& filepath) const;
+    void load_accumulator_json(const std::string& filepath);
+
     ProcessResult process_nmea_sentence(const std::string& sentence);
     PluginSnapshot snapshot() const;
 

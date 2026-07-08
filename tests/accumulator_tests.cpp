@@ -320,6 +320,27 @@ void plugin_core_rejects_incomplete_profile_settings() {
     expect_true(threw, "Incomplete settings are rejected");
 }
 
+void plugin_core_serializes_and_restores_accumulator_state() {
+    eexi_cii::PluginCore source(bulk_profile());
+    source.process_nmea_sentence(
+        "$GPRMC,000000,A,0000.000,N,00000.000,E,012.0,000.0,010126,,*1A"
+    );
+    source.process_nmea_sentence(
+        "$GPRMC,010000,A,0100.000,N,00000.000,E,012.0,000.0,010126,,*1A"
+    );
+
+    eexi_cii::PluginCore restored(bulk_profile());
+    restored.restore_accumulator_json(source.serialize_accumulator_json());
+
+    const auto result = restored.process_nmea_sentence(
+        "$GPRMC,020000,A,0200.000,N,00000.000,E,012.0,000.0,010126,,*1A"
+    );
+
+    expect_status(result.status, eexi_cii::ProcessStatus::Accumulated, "Restored core accumulates");
+    expect_near(result.snapshot.ytd.distance_nm, 120.080921466, 0.000001, "Restored core distance");
+    expect_near(result.snapshot.ytd.co2_tonnes, 5.562241200, 0.000001, "Restored core CO2");
+}
+
 } // namespace
 
 int main() {
@@ -336,6 +357,7 @@ int main() {
         {"PluginCore reports below-threshold exclusion", plugin_core_reports_below_threshold_exclusion},
         {"PluginCore applies Profile settings to runtime state", plugin_core_applies_profile_settings_to_runtime_state},
         {"PluginCore rejects incomplete Profile settings", plugin_core_rejects_incomplete_profile_settings},
+        {"PluginCore serializes and restores Accumulator state", plugin_core_serializes_and_restores_accumulator_state},
     };
 
     int failures = 0;
