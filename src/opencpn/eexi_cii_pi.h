@@ -5,6 +5,8 @@
 
 #include "ocpn_plugin.h"
 
+#include <wx/bitmap.h>
+
 #ifndef EEXI_CII_PLUGIN_EXPORT
 #if defined(_WIN32)
 #define EEXI_CII_PLUGIN_EXPORT __declspec(dllexport)
@@ -33,11 +35,13 @@ public:
     int GetPlugInVersionPost() override;
     const char* GetPlugInVersionPre() override;
     const char* GetPlugInVersionBuild() override;
+    int GetToolbarToolCount() override;
 
     wxString GetCommonName() override;
     wxString GetShortDescription() override;
     wxString GetLongDescription() override;
     void ShowPreferencesDialog(wxWindow* parent) override;
+    void OnToolbarToolCallback(int id) override;
 
     void SetNMEASentence(wxString& sentence) override;
 
@@ -56,9 +60,19 @@ private:
     void load_accumulator();
     void save_accumulator();
     void apply_settings(const eexi_cii::ProfileSettings& settings);
+    void record_diagnostic(
+        eexi_cii::DiagnosticSeverity severity,
+        const std::string& code,
+        const std::string& message,
+        const std::string& detail = ""
+    );
+    void export_annual_csv(wxWindow* parent);
+    void export_voyage_csv(wxWindow* parent);
     void show_dashboard(wxWindow* parent);
+    void hide_dashboard();
     void update_dashboard();
     void close_dashboard();
+    void update_toolbar_state();
 
     eexi_cii::PluginCore m_core;
     eexi_cii::ProfileSettings m_settings;
@@ -68,7 +82,10 @@ private:
     wxString m_latest_message;
     wxString m_data_dir;
     wxString m_json_path;
+    wxBitmap m_toolbar_bitmap;
+    int m_toolbar_id = -1;
     bool m_setup_required = true;
+    bool m_dashboard_visible = true;
 };
 
 extern "C" EEXI_CII_PLUGIN_EXPORT opencpn_plugin* create_pi(void* plugin_manager);

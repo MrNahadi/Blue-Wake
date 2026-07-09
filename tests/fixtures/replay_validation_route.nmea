@@ -1,0 +1,7 @@
+# Synthetic validation fixture.
+# Provenance: generated deterministic RMC-only route for release-gate replay testing.
+# Limitation: validates parser/distance/fuel/rating flow only; it is not real vessel fuel validation.
+$GPRMC,000000,A,0000.000,N,00000.000,E,012.0,000.0,010126,,*1A
+$GPRMC,010000,A,0100.000,N,00000.000,E,012.0,000.0,010126,,*1A
+$GPRMC,020000,A,0200.000,N,00000.000,E,012.0,000.0,010126,,*1A
+$GPRMC,030000,A,0300.000,N,00000.000,E,012.0,000.0,010126,,*1A

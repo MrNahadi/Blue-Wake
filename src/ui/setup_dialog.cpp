@@ -15,6 +15,9 @@
 namespace eexi_cii {
 namespace {
 
+constexpr const char* kDisclaimer =
+    "Operational awareness only - not for official regulatory submission.";
+
 struct ShipTypeChoice {
     const char* label;
     ShipType type;
@@ -163,6 +166,8 @@ SetupDialog::SetupDialog(wxWindow* parent, const ProfileSettings& initial_settin
     m_reference_speed =
         add_number(eexi_panel, eexi_grid, "Reference speed knots", 0.0, 60.0, 0.1, 2);
     eexi_sizer->Add(eexi_grid, 0, wxEXPAND | wxALL, 12);
+    eexi_sizer->Add(new wxStaticText(eexi_panel, wxID_ANY, kDisclaimer), 0,
+        wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 12);
     eexi_panel->SetSizer(eexi_sizer);
     notebook->AddPage(eexi_panel, "EEXI");
 

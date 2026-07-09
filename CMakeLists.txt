@@ -213,4 +213,36 @@ if(EEXI_CII_BUILD_TESTS)
 
     add_test(NAME eexi_cii_accumulator_tests COMMAND eexi_cii_accumulator_tests)
 
+    add_executable(eexi_cii_replay_validation_tests
+        tests/replay_validation_tests.cpp
+    )
+
+    target_link_libraries(eexi_cii_replay_validation_tests PRIVATE eexi_cii_plugin_core)
+    target_compile_features(eexi_cii_replay_validation_tests PRIVATE cxx_std_17)
+    target_compile_definitions(eexi_cii_replay_validation_tests
+        PRIVATE
+            EEXI_CII_TEST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
+    )
+
+    if(MSVC)
+        target_compile_options(eexi_cii_replay_validation_tests PRIVATE /W4)
+    else()
+        target_compile_options(eexi_cii_replay_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+
+    add_test(NAME eexi_cii_replay_validation_tests COMMAND eexi_cii_replay_validation_tests)
+
+    find_program(POWERSHELL_EXECUTABLE NAMES powershell pwsh)
+    if(POWERSHELL_EXECUTABLE)
+        add_test(
+            NAME eexi_cii_packaging_tests
+            COMMAND ${POWERSHELL_EXECUTABLE}
+                -NoProfile
+                -ExecutionPolicy
+                Bypass
+                -File
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/packaging_tests.ps1
+        )
+    endif()
+
 endif()

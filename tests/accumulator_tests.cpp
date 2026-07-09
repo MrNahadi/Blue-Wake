@@ -243,6 +243,20 @@ void plugin_core_ignores_invalid_sentences_without_state_change() {
     expect_false(result.snapshot.has_aer, "Invalid sentence does not create AER snapshot");
 }
 
+void plugin_core_records_invalid_rmc_diagnostic() {
+    eexi_cii::PluginCore core(bulk_profile());
+
+    const auto result = core.process_nmea_sentence("$GPRMC,bad*00");
+
+    expect_equal_size(core.diagnostic_history().size(), 1, "One invalid RMC diagnostic");
+    expect_equal_size(result.snapshot.diagnostics.size(), 1, "Snapshot includes diagnostic");
+    expect_true(
+        result.snapshot.diagnostics[0].severity == eexi_cii::DiagnosticSeverity::Warning,
+        "Invalid RMC diagnostic severity"
+    );
+    expect_true(result.snapshot.diagnostics[0].code == "invalid_rmc_burst", "Invalid RMC code");
+}
+
 void plugin_core_turns_rmc_stream_into_dashboard_snapshot() {
     eexi_cii::PluginCore core(bulk_profile());
 
@@ -354,6 +368,27 @@ void plugin_core_serializes_and_restores_accumulator_state() {
     expect_near(result.snapshot.ytd.co2_tonnes, 5.562241200, 0.000001, "Restored core CO2");
 }
 
+void plugin_core_records_year_rollover_diagnostic() {
+    eexi_cii::PluginCore core(bulk_profile());
+    core.process_nmea_sentence(
+        "$GPRMC,000000,A,0000.000,N,00000.000,E,012.0,000.0,010126,,*1A"
+    );
+    core.process_nmea_sentence(
+        "$GPRMC,010000,A,0100.000,N,00000.000,E,012.0,000.0,010126,,*1A"
+    );
+
+    const bool rolled = core.check_year_rollover(2027);
+
+    expect_true(rolled, "PluginCore year rollover occurred");
+    expect_equal_size(core.diagnostic_history().size(), 1, "One rollover diagnostic");
+    expect_true(
+        core.diagnostic_history()[0].severity == eexi_cii::DiagnosticSeverity::Info,
+        "Rollover diagnostic severity"
+    );
+    expect_true(core.diagnostic_history()[0].code == "year_rollover", "Rollover diagnostic code");
+    expect_equal(core.snapshot().ytd.year, 2027, "Rollover snapshot year");
+}
+
 } // namespace
 
 int main() {
@@ -366,12 +401,14 @@ int main() {
         {"Year rollover archives and resets YTD state", year_rollover_archives_and_resets_ytd_state},
         {"RMC to running AER pipeline produces expected result", rmc_to_running_aer_pipeline_produces_expected_result},
         {"PluginCore ignores invalid sentences without state change", plugin_core_ignores_invalid_sentences_without_state_change},
+        {"PluginCore records invalid RMC diagnostic", plugin_core_records_invalid_rmc_diagnostic},
         {"PluginCore turns RMC stream into dashboard snapshot", plugin_core_turns_rmc_stream_into_dashboard_snapshot},
         {"PluginCore reports below-threshold exclusion", plugin_core_reports_below_threshold_exclusion},
         {"PluginCore discards SOG outlier without updating state", plugin_core_discards_sog_outlier_without_updating_state},
         {"PluginCore applies Profile settings to runtime state", plugin_core_applies_profile_settings_to_runtime_state},
         {"PluginCore rejects incomplete Profile settings", plugin_core_rejects_incomplete_profile_settings},
         {"PluginCore serializes and restores Accumulator state", plugin_core_serializes_and_restores_accumulator_state},
+        {"PluginCore records year rollover diagnostic", plugin_core_records_year_rollover_diagnostic},
     };
 
     int failures = 0;

@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="opencpn-plugin">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="name" type="xs:token"/>
+        <xs:element name="version" type="xs:token"/>
+        <xs:element name="release" type="xs:token"/>
+        <xs:element name="summary" type="xs:token"/>
+        <xs:element name="api-version" type="xs:token"/>
+        <xs:element name="open-source" type="xs:token"/>
+        <xs:element name="author" type="xs:token"/>
+        <xs:element name="source" type="xs:token"/>
+        <xs:element name="info-url" type="xs:token"/>
+        <xs:element name="description" type="xs:string"/>
+        <xs:element name="target" type="xs:token"/>
+        <xs:element name="target-version" type="xs:token"/>
+        <xs:element name="target-arch" type="xs:token"/>
+        <xs:element name="tarball-url" type="xs:token"/>
+        <xs:element name="tarball-checksum" type="xs:token"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
