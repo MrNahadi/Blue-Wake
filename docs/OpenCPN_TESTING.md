@@ -16,6 +16,19 @@ The plugin DLL is written to:
 build-opencpn-vcpkg-x86-release\eexi_cii_pi.dll
 ```
 
+Before installing, confirm the plugin imports a wxWidgets runtime compatible
+with your OpenCPN install:
+
+```powershell
+objdump -p .\build-opencpn-vcpkg-x86-release\eexi_cii_pi.dll |
+  Select-String "DLL Name: wx"
+```
+
+For the local OpenCPN 5.14.0 Windows test install, compatible wx imports should
+be in the `wxbase32u_*` / `wxmsw32u_*` family. If the output shows
+`wxbase331u_vc_custom.dll` or `wxmsw331u_core_vc_custom.dll`, OpenCPN will mark
+the plugin incompatible and it will not appear in Options > Plugins.
+
 ## Install
 
 Close OpenCPN, then copy the DLLs into OpenCPN's per-user plugin directory:
@@ -33,7 +46,8 @@ OpenCPN checks `C:\Users\muigu\AppData\Local\opencpn\plugins` before the global 
 2. Open Options > Plugins.
 3. Enable the EEXI-CII or Blue Wake plugin. If it is not listed and you only see
    catalog entries such as ChartDownloader, WMM, Dashboard, and GRIB, OpenCPN has
-   not loaded the plugin yet; repeat the install step above.
+   not loaded the plugin yet; repeat the install step above and check the
+   OpenCPN log for `Incompatible plugin detected` or `failed at last attempt`.
 4. Complete the first-run setup dialog with test vessel values.
 5. Confirm the EEXI-CII Monitor window opens.
 6. Feed valid RMC data and confirm SOG, voyage totals, YTD totals, AER, and CII rating update.

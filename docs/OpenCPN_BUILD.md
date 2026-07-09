@@ -55,6 +55,24 @@ C:\Users\muigu\vcpkg\bootstrap-vcpkg.bat -disableMetrics
 C:\Users\muigu\vcpkg\vcpkg.exe install wxwidgets:x86-windows
 ```
 
+Compatibility warning: OpenCPN rejects plugins built against a different
+wxWidgets ABI. OpenCPN 5.14.0 on the local Windows test machine reports
+wxWidgets 3.2.9 and ships `wxbase32u_vc14x.dll` /
+`wxmsw32u_core_vc14x.dll`. If the built plugin imports vcpkg's wxWidgets 3.3.1
+DLLs such as `wxbase331u_vc_custom.dll`, OpenCPN will log `Incompatible plugin
+detected` and the plugin will not appear in the Plugins list.
+
+Check before installing:
+
+```powershell
+objdump -p .\build-opencpn-vcpkg-x86-release\eexi_cii_pi.dll |
+  Select-String "DLL Name: wx"
+```
+
+For OpenCPN 5.14.0, rebuild with a wxWidgets 3.2 `msvc-wx32` toolchain or the
+official OpenCPN managed-plugin build environment if the output shows
+`wxbase331u_*` or `wxmsw331u_*`.
+
 Configure from a Visual Studio developer environment:
 
 ```powershell

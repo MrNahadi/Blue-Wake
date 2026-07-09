@@ -10,6 +10,14 @@
 - Confirm the imported tarball contains `eexi_cii_pi.dll`.
 - Confirm the metadata target is `msvc-wx32` and target architecture is `x86`.
 - Check the OpenCPN log for load errors or missing runtime DLLs.
+- If the OpenCPN log says `Incompatible plugin detected`, inspect the plugin DLL
+  imports with `objdump -p eexi_cii_pi.dll`. The wx DLL names must match the
+  runtime family shipped with OpenCPN. For OpenCPN 5.14.0 on Windows, imports
+  should be `wxbase32u_*` / `wxmsw32u_*`, not vcpkg wxWidgets 3.3.1 names such
+  as `wxbase331u_vc_custom.dll`.
+- If the OpenCPN log says `failed at last attempt`, close OpenCPN. After
+  replacing the DLL with a compatible build, remove
+  `C:\ProgramData\opencpn\load_stamps\eexi_cii_pi` and restart OpenCPN.
 
 ## Monitor Shows No GPS Fix
 

@@ -467,6 +467,26 @@ C:\vcpkg\vcpkg.exe install wxwidgets:x86-windows
 
 This can take a while on a fresh system.
 
+Important: OpenCPN checks the wxWidgets ABI before loading a plugin. The plugin
+DLL must be built against the same wxWidgets runtime family as the OpenCPN
+installation. For example, the local OpenCPN 5.14.0 test install reports
+wxWidgets 3.2.9 and ships `wxbase32u_vc14x.dll` plus
+`wxmsw32u_core_vc14x.dll`. A plugin built against vcpkg wxWidgets 3.3.1 imports
+`wxbase331u_vc_custom.dll` and `wxmsw331u_core_vc_custom.dll`; OpenCPN marks
+that DLL incompatible and it will not appear in `Options > Plugins`.
+
+Before installing the DLL, check its imports:
+
+```powershell
+objdump -p .\build-opencpn-vcpkg-x86-release\eexi_cii_pi.dll |
+  Select-String "DLL Name: wx"
+```
+
+For the OpenCPN 5.14.0 Windows build, the wx imports must be from the OpenCPN
+`wxbase32u_*` / `wxmsw32u_*` family. If the output shows `wxbase331u_*` or
+`wxmsw331u_*`, rebuild against a wxWidgets 3.2 `msvc-wx32` toolchain or the
+official OpenCPN managed-plugin build environment before installing.
+
 ### Windows Plugin Step 3: Find `VsDevCmd.bat`
 
 Visual Studio provides a setup script called `VsDevCmd.bat`. Common locations:
@@ -627,6 +647,10 @@ entries. If you only see built-in/catalog plugins such as `ChartDownloader`,
 `WMM`, `Dashboard`, or `GRIB`, then Blue Wake/EEXI-CII is not installed yet.
 The `Dashboard` entry is OpenCPN's own dashboard plugin; it is not this plugin.
 
+Also confirm the plugin binary is ABI-compatible before copying or importing it.
+If OpenCPN has previously rejected the plugin, it may create a load-stamp file
+and skip future attempts until that stamp is removed.
+
 ### Windows Manual Install
 
 Close OpenCPN first.
@@ -650,6 +674,25 @@ Then:
 4. Enable it.
 5. Complete the vessel profile setup dialog.
 6. Click the `EEXI/CII Monitor` toolbar button.
+
+If the plugin still does not appear after copying the DLLs, close OpenCPN and
+check:
+
+```powershell
+Select-String -Path "C:\ProgramData\opencpn\opencpn.log" `
+  -Pattern "eexi_cii_pi|incompatible|failed at last attempt"
+```
+
+If the log says `Incompatible plugin detected`, rebuild the plugin against the
+same wxWidgets ABI used by OpenCPN. If the log says `failed at last attempt`,
+OpenCPN is skipping the retry because of a load stamp. After replacing the DLL
+with a compatible build, remove:
+
+```text
+C:\ProgramData\opencpn\load_stamps\eexi_cii_pi
+```
+
+Then restart OpenCPN.
 
 ### Plugin Manager Import
 
@@ -908,6 +951,12 @@ If the Plugins page only shows entries such as `ChartDownloader`, `WMM`,
 `Dashboard`, and `GRIB`, OpenCPN has not loaded Blue Wake/EEXI-CII yet.
 Install it with `Import plugin...` or copy the Windows DLLs manually.
 
+If you did copy/import it and it still does not appear, check
+`C:\ProgramData\opencpn\opencpn.log`. A message like `Incompatible plugin
+detected` usually means the plugin was built against a different wxWidgets ABI
+than OpenCPN. A message like `failed at last attempt` means OpenCPN has
+blocklisted the plugin with a load stamp after an earlier failed load.
+
 Check:
 
 - Did you copy the plugin file into the correct OpenCPN plugin folder?
@@ -916,6 +965,8 @@ Check:
 - Did OpenCPN log a missing DLL or missing symbol error?
 - On Windows, did you copy all generated DLL dependencies, not only
   `eexi_cii_pi.dll`?
+- On Windows, does `objdump -p eexi_cii_pi.dll` show wx DLL names matching the
+  wx DLLs shipped with OpenCPN?
 
 ### Dashboard Shows No GPS Fix
 
