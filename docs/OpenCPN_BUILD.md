@@ -58,14 +58,14 @@ C:\Users\muigu\vcpkg\vcpkg.exe install wxwidgets:x86-windows
 Configure from a Visual Studio developer environment:
 
 ```powershell
-cmd.exe /c "call ""C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat"" -arch=x86 && cmake -S . -B build-opencpn-vcpkg-x86 -G Ninja -DCMAKE_TOOLCHAIN_FILE=C:/Users/muigu/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x86-windows -DEEXI_CII_BUILD_OPENCPN_PLUGIN=ON -DEEXI_CII_BUILD_TESTS=OFF"
-cmd.exe /c "call ""C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat"" -arch=x86 && cmake --build build-opencpn-vcpkg-x86"
+cmd.exe /c "call ""C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat"" -arch=x86 && cmake -S . -B build-opencpn-vcpkg-x86-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=C:/Users/muigu/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x86-windows -DEEXI_CII_BUILD_OPENCPN_PLUGIN=ON -DEEXI_CII_BUILD_TESTS=OFF"
+cmd.exe /c "call ""C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat"" -arch=x86 && cmake --build build-opencpn-vcpkg-x86-release"
 ```
 
 The built plugin DLL is:
 
 ```text
-build-opencpn-vcpkg-x86/eexi_cii_pi.dll
+build-opencpn-vcpkg-x86-release/eexi_cii_pi.dll
 ```
 
 An x64 configure can find wxWidgets, but linking fails because the bundled

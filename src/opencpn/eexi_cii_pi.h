@@ -11,6 +11,7 @@ public:
 
     int Init() override;
     bool DeInit() override;
+    void LateInit() override;
 
     int GetAPIVersionMajor() override;
     int GetAPIVersionMinor() override;
@@ -24,6 +25,7 @@ public:
     wxString GetCommonName() override;
     wxString GetShortDescription() override;
     wxString GetLongDescription() override;
+    void ShowPreferencesDialog(wxWindow* parent) override;
 
     void SetNMEASentence(wxString& sentence) override;
 
@@ -41,6 +43,7 @@ private:
     void initialize_data_path();
     void load_accumulator();
     void save_accumulator();
+    void apply_settings(const eexi_cii::ProfileSettings& settings);
 
     eexi_cii::PluginCore m_core;
     eexi_cii::ProfileSettings m_settings;

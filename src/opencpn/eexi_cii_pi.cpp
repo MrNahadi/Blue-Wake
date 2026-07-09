@@ -1,5 +1,7 @@
 #include "opencpn/eexi_cii_pi.h"
 
+#include "ui/setup_dialog.h"
+
 #include <wx/fileconf.h>
 #include <wx/filename.h>
 
@@ -30,13 +32,19 @@ int eexi_cii_pi::Init() {
     if (m_setup_required && m_latest_message.empty()) {
         m_latest_message = "Vessel profile setup required";
     }
-    return WANTS_NMEA_SENTENCES;
+    return WANTS_NMEA_SENTENCES | WANTS_CONFIG | WANTS_PREFERENCES | WANTS_LATE_INIT;
 }
 
 bool eexi_cii_pi::DeInit() {
     save_settings();
     save_accumulator();
     return true;
+}
+
+void eexi_cii_pi::LateInit() {
+    if (m_setup_required) {
+        ShowPreferencesDialog(GetOCPNCanvasWindow());
+    }
 }
 
 int eexi_cii_pi::GetAPIVersionMajor() {
@@ -81,6 +89,22 @@ wxString eexi_cii_pi::GetShortDescription() {
 
 wxString eexi_cii_pi::GetLongDescription() {
     return "Estimates fuel use from own-ship RMC sentences and tracks CII/AER progress for configured vessels.";
+}
+
+void eexi_cii_pi::ShowPreferencesDialog(wxWindow* parent) {
+    eexi_cii::SetupDialog dialog(parent, m_settings);
+    if (dialog.ShowModal() != wxID_OK) {
+        return;
+    }
+
+    try {
+        apply_settings(dialog.settings());
+        save_settings();
+    } catch (const std::exception& ex) {
+        m_setup_required = true;
+        m_latest_status = eexi_cii::ProcessStatus::Error;
+        m_latest_message = wxString::FromUTF8(ex.what());
+    }
 }
 
 void eexi_cii_pi::SetNMEASentence(wxString& sentence) {
@@ -150,11 +174,7 @@ void eexi_cii_pi::load_settings() {
     }
 
     try {
-        m_settings = eexi_cii::decode_profile_settings(values);
-        m_setup_required = m_settings.setup_required();
-        if (!m_setup_required) {
-            m_core.apply_settings(m_settings);
-        }
+        apply_settings(eexi_cii::decode_profile_settings(values));
     } catch (const std::exception& ex) {
         m_settings = eexi_cii::ProfileSettings{};
         m_setup_required = true;
@@ -212,6 +232,19 @@ void eexi_cii_pi::save_accumulator() {
     } catch (const std::exception& ex) {
         m_latest_message = wxString::FromUTF8(ex.what());
     }
+}
+
+void eexi_cii_pi::apply_settings(const eexi_cii::ProfileSettings& settings) {
+    m_settings = settings;
+    m_setup_required = m_settings.setup_required();
+    if (m_setup_required) {
+        return;
+    }
+
+    m_core.apply_settings(m_settings);
+    m_latest_snapshot = m_core.snapshot();
+    m_latest_status = eexi_cii::ProcessStatus::InvalidSentence;
+    m_latest_message.clear();
 }
 
 extern "C" DECL_EXP opencpn_plugin* create_pi(void* plugin_manager) {
