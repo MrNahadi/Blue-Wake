@@ -35,3 +35,5 @@ OpenCPN checks `C:\Users\muigu\AppData\Local\opencpn\plugins` before the global 
 4. Complete the first-run setup dialog with test vessel values.
 5. Confirm the EEXI-CII Monitor window opens.
 6. Feed valid RMC data and confirm SOG, voyage totals, YTD totals, AER, and CII rating update.
+
+For a repeatable no-hardware demonstration, use `docs/PANEL_DEMO.md`.
