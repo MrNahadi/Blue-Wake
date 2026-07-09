@@ -1,0 +1,93 @@
+\chapter{Technical and Regulatory Review}
+\label{chap:literature-review}
+
+\section{Introduction}
+This chapter reviews the regulatory and technical foundations used by the prototype. It covers IMO energy-efficiency measures, CII calculation concepts, empirical fuel estimation, marine navigation data, and OpenCPN as the host environment for the project.
+
+\section{IMO Efficiency and CII Measures}
+\subsection{Greenhouse Gas Strategy}
+IMO's climate work has moved from design efficiency toward a broader operational decarbonisation pathway. The 2023 IMO GHG Strategy calls for net-zero GHG emissions from international shipping by or around 2050, intermediate indicative checkpoints for 2030 and 2040, and at least a 40\% reduction in average carbon intensity by 2030 compared with 2008 \cite{imoGhgStrategy2026}. These objectives create the policy background for tools that help operators see carbon-intensity performance during a voyage rather than only after annual reporting.
+
+\subsection{Energy Efficiency Existing Ship Index}
+The Energy Efficiency Existing Ship Index (EEXI) is a design-based technical measure. It applies to ships of 400 gross tonnage and above, and the attained EEXI must be below the required EEXI for the vessel type and size category \cite{imoEexiCiiFaq2026}. The current IMO EEXI guideline set includes MEPC.350(78) for attained EEXI calculation, MEPC.351(78) for survey and certification, and MEPC.335(76) for shaft or engine power limitation systems \cite{imoEexiCiiFaq2026}.
+
+At a high level, EEXI compares an estimate of CO$_2$ emissions associated with installed propulsion and auxiliary power against transport work:
+\begin{equation}
+    EEXI = \frac{\text{CO}_2 \text{ emission term}}{\text{transport work term}}
+    \label{eq:eexi-basic}
+\end{equation}
+
+The complete statutory calculation includes engine powers, specific fuel consumption, fuel conversion factors, reference speed, ship capacity, and correction factors. Because those correction factors require vessel-specific technical documentation, the current software does not implement statutory EEXI certification. In this project, EEXI provides context and setup fields, while implemented real-time logic focuses on CII monitoring.
+
+\subsection{Carbon Intensity Indicator}
+The Carbon Intensity Indicator (CII) is operational rather than purely design-based. It applies to ships of 5,000 gross tonnage and above and is calculated annually after the end of each calendar year \cite{imoEexiCiiFaq2026}. IMO rates the achieved carbon intensity from A to E, where A is the best performance level. A D rating for three consecutive years, or an E rating for one year, requires a corrective action plan within the Ship Energy Efficiency Management Plan \cite{imoEexiCiiFaq2026}.
+
+The CII guideline set relevant to this project includes MEPC.352(78) for operational carbon-intensity calculation methods, MEPC.353(78) for reference lines, MEPC.338(76) and MEPC.400(83) for reduction factors, MEPC.354(78) for rating boundaries, and MEPC.355(78) for correction factors and voyage adjustments \cite{imoEexiCiiFaq2026}. The prototype implements the AER/cgDIST calculation route, reference-line coefficients, rating boundary vectors, and reduction factors for 2023--2026.
+
+For most cargo vessels, the attained CII is represented by the Annual Efficiency Ratio (AER):
+\begin{equation}
+    AER = \frac{\sum_i FC_i \cdot C_{F,i} \cdot 10^6}{DWT \cdot D_t}
+    \label{eq:aer-def}
+\end{equation}
+where $FC_i$ is fuel consumed in tonnes, $C_{F,i}$ is the fuel-to-CO$_2$ conversion factor, $DWT$ is deadweight tonnage, and $D_t$ is distance sailed in nautical miles. The multiplication by $10^6$ converts tonnes of CO$_2$ to grams, giving units of gCO$_2$/(dwt-nm).
+
+For ro-ro cargo, ro-ro passenger, vehicle carrier, and cruise passenger ship categories modelled in the software, the prototype uses cgDIST, where gross tonnage (GT) is used as the capacity denominator instead of DWT.
+
+The required CII is derived from a ship-type reference line:
+\begin{equation}
+    \text{CII}_{ref} = a \cdot \text{Capacity}^{-c}
+    \label{eq:cii-reference}
+\end{equation}
+\begin{equation}
+    \text{Required CII} = \left(1 - \frac{Z}{100}\right) \cdot \text{CII}_{ref}
+    \label{eq:required-cii}
+\end{equation}
+where $a$ and $c$ are ship-type coefficients and $Z$ is the annual reduction factor. The prototype intentionally rejects unsupported future years rather than extrapolating beyond the source-tagged 2023--2026 reduction factors.
+
+\section{Empirical Fuel Consumption Estimation}
+Direct fuel-flow measurement would provide stronger evidence than estimation, but it would also require sensor integration that is not universally available. The prototype therefore uses the Admiralty Coefficient as an empirical model for operational awareness. This approach is common in preliminary ship performance estimation because approximate shaft power varies with displacement to the two-thirds power and speed cubed \cite{molland2017shipResistance}.
+
+The coefficient relationship is:
+\begin{equation}
+    C = \frac{\Delta^{2/3} \cdot V^3}{P}
+    \label{eq:admiralty-base}
+\end{equation}
+and therefore:
+\begin{equation}
+    P = \frac{\Delta^{2/3} \cdot V^3}{C}
+    \label{eq:admiralty-power}
+\end{equation}
+where $\Delta$ is vessel displacement in tonnes, $V$ is speed in knots, and $P$ is estimated shaft power in kW.
+
+Fuel rate is then estimated using the user-provided specific fuel oil consumption:
+\begin{equation}
+    \dot{m}_f = P \cdot SFOC \cdot 10^{-6}
+    \label{eq:fuel-estimation}
+\end{equation}
+where $SFOC$ is in g/kWh and $\dot{m}_f$ is in tonnes per hour. CO$_2$ rate is computed by multiplying fuel rate by the selected fuel's emission factor.
+
+This model is computationally small and works with basic navigation data, but it is not a substitute for measured fuel flow. It assumes a calibrated vessel profile and does not account for weather, hull fouling, auxiliary loads, or detailed engine operating maps.
+
+\section{NMEA 0183 RMC Navigation Data}
+The National Marine Electronics Association's NMEA 0183 standard is widely used for marine navigation data. The RMC sentence provides a compact navigation record including time, validity status, latitude, longitude, speed over ground, course over ground, and date \cite{nmea0183}.
+
+A typical RMC sentence has the form:
+\begin{center}
+\texttt{\$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A}
+\end{center}
+
+The prototype extracts:
+\begin{itemize}
+    \item UTC time and date, used to order observations and detect year rollover.
+    \item Status flag, where only active fixes are accepted.
+    \item Latitude and longitude, used for Haversine distance accumulation.
+    \item Speed Over Ground, used as the speed input to the Admiralty Coefficient model.
+    \item Checksum, used to reject corrupted sentences before state is updated.
+\end{itemize}
+
+The implementation accepts common GNSS talker IDs used by GPS, combined GNSS, GLONASS, Galileo, and BeiDou-compatible streams. Invalid checksums, void status, malformed coordinates, negative SOG, and empty SOG fields are rejected.
+
+\section{OpenCPN as Host Platform}
+OpenCPN is a free, open-source chartplotter and marine GPS navigation application designed for use at the helm station or as a planning tool \cite{opencpnOfficial2026}. Its plugin API allows additional functionality to be connected to the navigation data stream and user interface. This makes it a suitable host for a summer-school prototype because the plugin can receive the same class of own-ship navigation input that OpenCPN already uses.
+
+The project uses OpenCPN as a bridge between maritime operations and open-source emissions awareness. Rather than asking users to copy voyage data into a spreadsheet after the voyage, the plugin shows the running relationship between navigation, estimated emissions, and CII rating while the vessel is underway or while a replay feed is being demonstrated.

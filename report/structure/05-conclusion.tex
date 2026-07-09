@@ -1,0 +1,29 @@
+\chapter{Conclusion and Future Work}
+\label{chap:conclusion}
+
+\section{Conclusion}
+This project produced a working OpenCPN plugin prototype for real-time CII operational awareness. The implemented pipeline accepts own-ship NMEA 0183 RMC data, rejects invalid or unsuitable inputs, estimates fuel and CO$_2$ from a configurable vessel profile, accumulates distance and emissions, and displays a running AER or cgDIST value with an A--E CII rating. The work is aligned with the KMOU OceanX International Summer School 2026 theme because it translates maritime decarbonisation regulation into an inspectable open-source software artefact.
+
+The project also clarified an important engineering boundary. Real-time CII awareness can be demonstrated using only navigation data and vessel profile assumptions, but official compliance cannot be inferred from that alone. The current prototype is useful for education, simulation, and operational awareness. It does not replace measured fuel data, statutory reporting, class-society verification, or the full IMO correction-factor framework.
+
+\section{Achievement of Objectives}
+\begin{enumerate}
+    \item \textbf{Regulatory review:} The report reviewed EEXI and CII requirements and corrected the regulatory references to the current IMO guideline set used by this prototype.
+    \item \textbf{CII calculation pipeline:} The prototype implements RMC parsing, Admiralty fuel estimation, CO$_2$ estimation, Haversine distance accumulation, AER/cgDIST calculation, and CII rating classification for the modelled ship types and 2023--2026 reduction factors.
+    \item \textbf{OpenCPN integration:} The repository includes an OpenCPN plugin wrapper, toolbar control, setup dialog, dashboard, diagnostics, JSON persistence, and CSV export functionality.
+    \item \textbf{Repeatable demonstration:} A synthetic replay fixture and UDP demo feed are present, allowing the project to be demonstrated without real shipboard equipment.
+    \item \textbf{Validation:} The current CTest suite passed all six entries, including replay and packaging tests.
+\end{enumerate}
+
+\section{Recommendations and Future Work}
+\begin{itemize}
+    \item \textbf{Complete the simplified EEXI calculator:} Implement attained and required EEXI display with a strong disclaimer that the result is not a statutory substitute.
+    \item \textbf{Add direct fuel-flow integration:} Support NMEA 2000 or other fuel-flow data sources so that measured fuel data can replace Admiralty Coefficient estimates where available.
+    \item \textbf{Implement CII correction factors:} Add the relevant MEPC.355(78) correction-factor and voyage-adjustment paths, while clearly separating official and estimated values.
+    \item \textbf{Run the field-test gate:} Validate installation, upgrade, long replay, missing GPS, corrupted persistence, restart recovery, year rollover, and CSV export inside OpenCPN.
+    \item \textbf{Compare against real vessel data:} Use anonymised voyage, noon-report, and fuel-flow records to quantify estimation error under different loading and weather conditions.
+    \item \textbf{Improve operational guidance:} Add scenario planning and speed-sensitivity views so operators can see how speed changes affect projected CII.
+\end{itemize}
+
+\section{Final Statement}
+The project demonstrates that open-source navigation software can host a practical maritime decarbonisation awareness tool. Its strongest contribution is not regulatory certification, but transparency: the formulas, assumptions, source code, tests, and limitations are visible. That makes the prototype suitable for a summer-school project, further research, and future engineering extension.

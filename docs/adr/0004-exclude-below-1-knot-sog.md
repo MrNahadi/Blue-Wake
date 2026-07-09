@@ -1,0 +1,5 @@
+# Exclude data points below 1 knot SOG
+
+NMEA data points where SOG is below 1.0 knot are excluded from CII accumulation. At near-zero speeds the vessel is at anchor, moored, or maneuvering in port, and the Admiralty Coefficient method produces negligible main engine fuel estimates that don't reflect actual fuel consumption (auxiliary engines, hotel load). Including these points would add zero or near-zero distance to the denominator while the vessel is actually burning fuel we can't measure, distorting the AER. The threshold is configurable in advanced settings. The dashboard clearly indicates when data is being excluded ("Port/anchor time excluded — main engine estimation only").
+
+This is a plugin-level estimation model limitation, distinct from the IMO's voyage adjustment provisions under MEPC.355(78), which allow excluding specific operational situations (ice navigation, emergency deviations, rescue operations) with both fuel and distance removed. The IMO adjustments require logbook evidence and are not implemented in plugin v1.

@@ -1,0 +1,45 @@
+\chapter{Introduction}
+\label{chap:introduction}
+
+\section{Summer School Project Context}
+This report has been prepared as a project report for the KMOU OceanX International Summer School 2026. The programme was announced by Korea Maritime \& Ocean University through its official English notice board in April 2026 \cite{kmouOceanX2026}. The project aligns with the summer school's ocean-technology theme by combining maritime decarbonisation, open-source navigation software, and practical ship-energy monitoring.
+
+The software artefact developed for this project is an OpenCPN plugin prototype named \texttt{eexi\_cii\_pi}. OpenCPN is a free and open-source chartplotter and marine GPS navigation platform used on Windows, macOS, Linux, Raspberry Pi, and Android \cite{opencpnOfficial2026}. The project therefore uses an existing navigation environment rather than creating a standalone emissions dashboard.
+
+\section{Background and Motivation}
+The decarbonisation of maritime transport has become a central regulatory and engineering concern. The Fourth IMO GHG Study reported that total shipping greenhouse gas emissions, including international, domestic, and fishing activity, increased from 977 million tonnes CO$_2$e in 2012 to 1,076 million tonnes CO$_2$e in 2018, while the sector's share of global anthropogenic emissions rose from 2.76\% to 2.89\% over the same period \cite{imoFourthGhg2020}. The same study found that international shipping carbon intensity had improved relative to 2008, but that total emissions continued to place pressure on the sector's climate pathway.
+
+The IMO's 2023 Strategy on Reduction of GHG Emissions from Ships sets the long-term ambition of reaching net-zero GHG emissions from international shipping by or around 2050 and includes a target to reduce average international shipping carbon intensity by at least 40\% by 2030 compared with 2008 \cite{imoGhgStrategy2026}. The short-term regulatory measures supporting this transition include the Energy Efficiency Existing Ship Index (EEXI) and the annual operational Carbon Intensity Indicator (CII). IMO states that MARPOL Annex VI amendments entered into force on 1 November 2022, with EEXI and CII requirements taking effect on 1 January 2023 \cite{imoEexiCiiFaq2026}.
+
+CII is especially operational because it turns fuel consumption, distance sailed, and ship capacity into an annual A--E rating. A ship rated D for three consecutive years, or E for one year, must submit a corrective action plan showing how it will achieve a C rating or better \cite{imoEexiCiiFaq2026}. This makes mid-year awareness important: if a ship only analyses its CII performance at the end of the reporting year, many operational options have already passed.
+
+\section{Problem Statement}
+Many compliance workflows remain retrospective. Operators may gather fuel and distance data for annual reporting, but masters and engineers often lack a live, navigation-integrated view of how present speed and voyage behaviour affect the vessel's year-to-date CII trajectory. Commercial platforms exist, but they may require proprietary systems, subscription models, satellite connectivity, or direct integration with fuel-flow sensors.
+
+This creates a practical access gap for smaller operators, research users, training environments, and developing maritime contexts. A lightweight OpenCPN plugin can demonstrate how live own-ship navigation data can be transformed into operational emissions awareness without requiring additional shipboard instrumentation. The project does not attempt to replace statutory verification. Instead, it explores how open-source software can make CII concepts visible during navigation and training.
+
+\section{Project Aim and Objectives}
+The aim of this project is to design, implement, and validate a demonstrable OpenCPN plugin prototype that monitors own-ship operational carbon intensity in near real time using NMEA 0183 RMC navigation data.
+
+The specific objectives are:
+\begin{enumerate}
+    \item \textbf{Review the IMO EEXI and CII framework:} Establish the regulatory context, especially the distinction between design-based EEXI and operational CII.
+    \item \textbf{Implement a modular CII calculation pipeline:} Parse RMC data, estimate fuel and CO$_2$, accumulate distance and emissions, and compute AER or cgDIST ratings using source-tagged IMO reference data.
+    \item \textbf{Integrate the pipeline with OpenCPN:} Use the OpenCPN plugin API and wxWidgets to provide setup, dashboard, diagnostics, persistence, and CSV export functions.
+    \item \textbf{Provide a repeatable demonstration path:} Include a synthetic RMC replay fixture and UDP demo feed so the project can be shown without a real vessel.
+    \item \textbf{Validate the implemented behaviour:} Run automated CTest entries for the domain logic, parser, accumulator, replay pipeline, and packaging workflow.
+\end{enumerate}
+
+\section{Scope and Limitations}
+The implemented prototype focuses on real-time CII operational awareness. It supports own-ship tracking only, uses NMEA 0183 RMC position and Speed Over Ground (SOG), estimates main-engine fuel consumption through the Admiralty Coefficient method, and calculates AER or cgDIST from accumulated CO$_2$ and distance. The implemented CII reduction factors are source-tagged for 2023--2026 only.
+
+The EEXI component is intentionally limited in this version. The setup dialog captures EEXI-related input fields, such as installed power and reference speed, and the report explains the EEXI regulatory context. However, the current codebase does not implement a complete statutory EEXI pass/fail calculator, nor does it implement the full EEXI correction-factor model.
+
+The main limitations are:
+\begin{itemize}
+    \item The plugin is not class-society validated and must not be used for official DCS, SEEMP, EEXI, or CII regulatory submissions.
+    \item Fuel consumption is estimated rather than measured; no direct fuel-flow sensor or NMEA 2000 integration is implemented.
+    \item IMO CII correction factors and voyage adjustments, such as the G5 correction-factor framework, are not implemented.
+    \item AIS targets are out of scope because they do not provide the continuous vessel profile and fuel parameters required for CII estimation.
+    \item Field validation with real vessel fuel and activity data remains future work.
+\end{itemize}

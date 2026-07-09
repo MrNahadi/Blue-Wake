@@ -1,0 +1,110 @@
+\chapter{Methodology}
+\label{chap:methodology}
+
+\section{Introduction}
+This chapter explains how the prototype was designed and implemented. The development approach separated regulatory calculation logic from OpenCPN-specific user-interface code so that the core emissions pipeline could be tested independently before being connected to the plugin wrapper.
+
+\section{Software Architecture}
+The repository implements a layered C++ architecture. The core logic is kept independent of wxWidgets and OpenCPN so that it can be compiled and tested through CMake/CTest without launching the navigation application. The OpenCPN wrapper then connects this core to NMEA input, toolbar controls, setup dialogs, dashboard display, persistence, and export actions.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=1.75cm]
+    \node (start) [startstop] {OpenCPN NMEA Stream};
+    \node (parser) [process, below of=start] {RMC Parser};
+    \node (valid) [decision, below of=parser, yshift=-0.55cm] {Valid RMC?};
+    \node (fuel) [process, below of=valid, yshift=-0.55cm] {Fuel and CO$_2$ Estimator};
+    \node (accum) [process, below of=fuel] {Accumulator};
+    \node (cii) [process, below of=accum] {AER/cgDIST and CII Rating};
+    \node (ui) [startstop, right of=cii, xshift=4.3cm] {Dashboard, Diagnostics, CSV};
+    \node (drop) [startstop, right of=valid, xshift=4.3cm] {Reject / Diagnose};
+
+    \draw [arrow] (start) -- (parser);
+    \draw [arrow] (parser) -- (valid);
+    \draw [arrow] (valid) -- node[anchor=east] {Yes} (fuel);
+    \draw [arrow] (valid) -- node[anchor=south] {No} (drop);
+    \draw [arrow] (fuel) -- (accum);
+    \draw [arrow] (accum) -- (cii);
+    \draw [arrow] (cii) -- (ui);
+    \draw [arrow] (drop.south) |- (ui.north);
+\end{tikzpicture}
+\caption{Implemented data flow from OpenCPN navigation input to emissions dashboard}
+\label{fig:system-architecture}
+\end{figure}
+
+The main modules are:
+\begin{enumerate}
+    \item \textbf{Domain module:} Vessel profile, fuel emission factors, Admiralty fuel estimation, CII reference data, AER/cgDIST computation, and rating classification.
+    \item \textbf{Data module:} RMC parsing, checksum validation, Haversine distance calculation, accumulator state, and JSON persistence.
+    \item \textbf{Plugin core:} The orchestration layer that receives NMEA sentences, applies filtering and diagnostics, updates accumulated state, and produces dashboard snapshots.
+    \item \textbf{OpenCPN adapter:} The plugin class that registers toolbar and NMEA capabilities, loads/saves OpenCPN settings, manages private plugin data files, and connects user actions to the core.
+    \item \textbf{User interface and export:} wxWidgets setup dialog, dashboard frame, diagnostics view, annual CSV export, and voyage CSV export.
+\end{enumerate}
+
+\section{NMEA Data Processing}
+The prototype processes own-ship NMEA 0183 RMC sentences. The parser accepts supported RMC talker IDs and then performs the following checks:
+\begin{enumerate}
+    \item The sentence must begin with \texttt{\$}, include a checksum delimiter, and contain a valid two-character hexadecimal checksum.
+    \item The sentence type must end in \texttt{RMC} and use a supported GNSS talker ID.
+    \item The status field must be active rather than void.
+    \item Time, date, latitude, longitude, and SOG fields must parse cleanly.
+    \item Empty or negative SOG values are rejected.
+\end{enumerate}
+
+Within \texttt{PluginCore}, further runtime filtering is applied. The default SOG threshold is 1.0 knot, so port or anchor periods below this threshold are excluded from accumulation. A default SOG outlier limit of 50 knots rejects unrealistic data without changing accumulated totals. Invalid sentence bursts, stale GPS input, processing errors, and year rollover events are recorded as diagnostic events.
+
+\section{Fuel and CO2 Estimation}
+For every accepted RMC sentence, the plugin estimates main-engine shaft power using the Admiralty Coefficient model:
+\begin{equation}
+    P = \frac{\Delta^{2/3} \cdot V^3}{C}
+    \label{eq:meth-fuel}
+\end{equation}
+where $\Delta$ is displacement, $V$ is SOG, and $C$ is the configured Admiralty Coefficient.
+
+The resulting shaft power is converted to fuel rate and CO$_2$ rate:
+\begin{equation}
+    \dot{m}_f = P \cdot SFOC \cdot 10^{-6}
+    \label{eq:meth-fuel-rate}
+\end{equation}
+\begin{equation}
+    \dot{m}_{CO_2} = \dot{m}_f \cdot C_F
+    \label{eq:meth-co2-rate}
+\end{equation}
+
+The supported fuel conversion factors are implemented for HFO, LFO, MDO, LNG, and methanol. Because the model estimates main-engine fuel use from speed, the dashboard displays operational estimates, not certified fuel-flow measurements.
+
+\section{Distance and Emissions Accumulation}
+The first valid fix establishes a baseline and does not accumulate distance. Each subsequent valid and underway fix is compared with the previous fix. The elapsed time is calculated from the RMC date and UTC time, while distance is calculated from latitude and longitude using the Haversine formula:
+\begin{equation}
+    d = 2r \arcsin\left(\sqrt{\sin^2\left(\frac{\phi_2 - \phi_1}{2}\right) + \cos(\phi_1)\cos(\phi_2)\sin^2\left(\frac{\lambda_2 - \lambda_1}{2}\right)}\right)
+    \label{eq:haversine}
+\end{equation}
+where $\phi$ is latitude, $\lambda$ is longitude, and $r$ is earth radius in nautical miles.
+
+The accumulator adds distance and estimated CO$_2$ only when both the current and previous fixes are eligible for accumulation. This prevents a below-threshold or invalid interval from being bridged as if it were a continuous underway period. The accumulator supports year-to-date state, active voyages, completed voyage records, YTD seed values for mid-year installation, and year rollover archiving.
+
+\section{CII Calculation and Rating}
+When accumulated distance is greater than zero, the plugin computes a running AER or cgDIST value:
+\begin{equation}
+    CII_{attained} = \frac{\text{Total CO}_2 \text{ (tonnes)} \cdot 10^6}{\text{Capacity} \cdot \text{Distance (nm)}}
+    \label{eq:meth-running-cii}
+\end{equation}
+
+For AER ship types, capacity is DWT. For cgDIST ship types, capacity is GT. The CII reference module stores ship-type coefficients, capacity caps or floors where applicable, rating boundary vectors, and reduction factors for 2023, 2024, 2025, and 2026. Unsupported future years are rejected so that the prototype does not silently invent regulatory values.
+
+\section{Persistence, Export, and User Interface}
+Vessel profile settings are stored through OpenCPN's configuration mechanism. Accumulator state is stored as JSON in the plugin-private data directory. This keeps vessel setup and voyage state available across OpenCPN sessions while retaining human-readable state files for debugging.
+
+The wxWidgets setup dialog contains:
+\begin{itemize}
+    \item a vessel tab for ship name, IMO number, ship type, GT, DWT, Admiralty Coefficient, SFOC, fuel type, and displacement;
+    \item an EEXI tab for installed power and reference speed fields, with an operational-awareness disclaimer;
+    \item an advanced tab for SOG threshold, target-year override, and YTD seed values.
+\end{itemize}
+
+The dashboard displays vessel context, GPS freshness, current SOG, estimated CO$_2$ rate, year-to-date distance and CO$_2$, running AER or cgDIST, required CII, margin to the C/D boundary, current CII rating, active-voyage totals, and the latest diagnostic. CSV export functions create annual summary and voyage breakdown files.
+
+Processing is intentionally synchronous through \texttt{PluginCore}. The parser and calculation path are small enough to run during the OpenCPN NMEA callback, while the dashboard is refreshed through ordinary wxWidgets event handling and timer-based freshness polling. No worker thread is used in this version.
+
+\section{Build and Demonstration Method}
+The core/test build is controlled through CMake with \texttt{EEXI\_CII\_BUILD\_TESTS=ON} and \texttt{EEXI\_CII\_BUILD\_OPENCPN\_PLUGIN=OFF}. The OpenCPN plugin wrapper is built separately when wxWidgets and OpenCPN plugin API support are available. The repository also includes a PowerShell UDP demo feed that sends synthetic RMC sentences to \texttt{127.0.0.1:10110}, allowing the plugin dashboard to be demonstrated without physical GPS equipment.

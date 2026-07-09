@@ -10,3 +10,20 @@ cmake-build-*/
 *.lib
 *.a
 *.pdb
+
+# Local Codex workflow files
+.agents/
+skills-lock.json
+
+# LaTeX build outputs
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.synctex.gz
+*.toc

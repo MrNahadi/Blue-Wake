@@ -1,0 +1,3 @@
+# Own-ship tracking only
+
+The plugin tracks only the own-ship (the vessel running OpenCPN), not AIS targets. OpenCPN receives AIS data for potentially hundreds of surrounding vessels, but tracking their CII would require continuous position histories that AIS reports only provide intermittently (every 2–30 seconds depending on vessel speed and AIS class). The own-ship has continuous GPS/SOG data at ~1 Hz, making fuel estimation via the Admiralty method viable. Tracking AIS targets would also require associating each target with a vessel profile (DWT, Admiralty Coefficient, SFOC) that is not available from AIS data alone. The scope constraint keeps the data model simple and the calculation reliable.

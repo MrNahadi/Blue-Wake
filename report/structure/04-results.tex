@@ -1,0 +1,92 @@
+\chapter{Results and Validation}
+\label{chap:results}
+
+\section{Introduction}
+This chapter reports what has been implemented and verified in the current repository. The validation evidence is limited to automated tests, synthetic replay data, and packaging checks. It does not represent real-vessel fuel validation, class-society approval, or statutory IMO reporting verification.
+
+\section{Implemented Prototype Features}
+The current prototype implements the main real-time CII monitoring workflow. Table \ref{tab:implemented-features} summarises the feature status against the actual codebase.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Implemented Feature Status}
+    \label{tab:implemented-features}
+    \begin{tabularx}{\textwidth}{lXX}
+        \toprule
+        \textbf{Area} & \textbf{Implemented in Current Repository} & \textbf{Status} \\
+        \midrule
+        RMC parsing & Checksum validation, active/void status, supported GNSS talkers, position, SOG, date, and time & Complete for RMC workflow \\
+        Fuel estimation & Admiralty Coefficient power estimate, SFOC conversion, and fuel-specific CO$_2$ factors & Complete as an estimate \\
+        CII calculation & AER/cgDIST, CII reference lines, rating boundaries, and 2023--2026 reduction factors & Complete for modelled ship types and years \\
+        Accumulation & Haversine distance, CO$_2$ totals, voyage records, YTD seed, threshold filtering, and year rollover & Implemented and tested \\
+        User interface & wxWidgets setup, dashboard, GPS freshness, diagnostics, and toolbar toggle & Implemented in OpenCPN wrapper \\
+        Persistence & OpenCPN settings for vessel profile and JSON persistence for accumulator state & Implemented and tested \\
+        CSV export & Annual summary CSV and voyage breakdown CSV & Implemented and tested \\
+        Packaging & Plugin-manager tarball/XML generation and checksum smoke test & Implemented and tested \\
+        EEXI calculator & EEXI context and input fields are present, but no full statutory EEXI pass/fail calculation is implemented & Partial / future work \\
+        Regulatory validation & No class-society, DCS, SEEMP, or official EEXI/CII submission validation & Not implemented \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Automated Test Results}
+The CTest suite was run in the current workspace on 9 July 2026. All six CTest entries passed. The suite covers pure domain calculations, CII reference values, NMEA parsing, persistence, accumulator behaviour, replay validation, and packaging metadata.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{CTest Validation Summary}
+    \label{tab:ctest-summary}
+    \begin{tabularx}{\textwidth}{lXX}
+        \toprule
+        \textbf{CTest Entry} & \textbf{Coverage} & \textbf{Result} \\
+        \midrule
+        \texttt{eexi\_cii\_domain\_tests} & Fuel emission factors, AER/cgDIST capacity selection, Admiralty fuel estimate, threshold behaviour, invalid profile values & Passed \\
+        \texttt{eexi\_cii\_aer\_engine\_tests} & Reduction factors, reference coefficients, capacity caps/floors, required CII, rating boundaries, cgDIST path & Passed \\
+        \texttt{eexi\_cii\_data\_tests} & RMC checksum/parsing, Haversine distance, CSV export, settings encoding, JSON/file persistence & Passed \\
+        \texttt{eexi\_cii\_accumulator\_tests} & Baseline fix handling, threshold gaps, YTD seed, voyage records, year rollover, PluginCore snapshots and diagnostics & Passed \\
+        \texttt{eexi\_cii\_replay\_validation\_tests} & Synthetic RMC replay through the same parser, fuel, accumulator, and AER path used by PluginCore & Passed \\
+        \texttt{eexi\_cii\_packaging\_tests} & Plugin-manager tarball generation, metadata XML fields, SHA256 checksum, package layout & Passed \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Synthetic Replay Validation}
+The replay fixture in \texttt{tests/fixtures/replay\_validation\_route.nmea} is a deterministic synthetic RMC track. It contains four valid RMC fixes and three one-hour underway intervals. The validation profile is a bulk carrier with 80,000 tonnes DWT, 50,000 GT, 90,000 tonnes displacement, Admiralty Coefficient 680, SFOC 175 g/kWh, and HFO fuel.
+
+\begin{table}[H]
+    \centering
+    \caption{Synthetic Replay Fixture Results}
+    \label{tab:replay-results}
+    \begin{tabularx}{0.86\textwidth}{lX}
+        \toprule
+        \textbf{Metric} & \textbf{Replay Result} \\
+        \midrule
+        Valid RMC fixes & 4 \\
+        Underway intervals & 3 one-hour intervals \\
+        Expected distance & 180.121382199 nautical miles \\
+        Expected estimated CO$_2$ & 8.343361800 tonnes \\
+        Expected AER & 0.579009672 gCO$_2$/(dwt-nm) \\
+        Expected CII rating & A \\
+        Actual CTest result & Passed within configured floating-point tolerance \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+This replay proves that the core processing chain is internally consistent for the fixture: RMC parsing, fuel estimation, Haversine distance accumulation, AER computation, and rating classification all produce the expected result. It does not prove real fuel-consumption accuracy because the replay has no measured fuel-flow reference.
+
+\section{Dashboard and Export Behaviour}
+The implemented dashboard displays live SOG, estimated CO$_2$ rate, YTD distance, YTD CO$_2$, running AER/cgDIST, required CII, margin to the C/D boundary, and CII rating. It also reports GPS freshness states, including no fix and stale GPS after more than 60 seconds without valid RMC data. Diagnostics are recorded for invalid RMC bursts, outlier rejection, processing errors, settings failures, persistence failures, CSV export outcomes, and year rollover.
+
+The export module has two outputs:
+\begin{itemize}
+    \item \textbf{Annual CSV summary:} year, ship name, IMO number, ship type, capacity type, capacity, total distance, total CO$_2$, AER/cgDIST, CII rating, and required CII.
+    \item \textbf{Voyage CSV breakdown:} voyage name, start/end timestamps, displacement, distance, CO$_2$, AER, and whether the record is named or unassigned.
+\end{itemize}
+
+\section{Packaging Outcome}
+The repository includes a packaging helper for the initial OpenCPN plugin-manager target \texttt{msvc-wx32} / \texttt{x86}. The packaging smoke test creates a fake plugin DLL, runs the packaging script, verifies the generated tarball and XML metadata, checks the API version and target fields, and confirms that the XML checksum matches the tarball SHA256 hash. This validates packaging mechanics, not runtime behaviour inside OpenCPN.
+
+\section{Validation Boundary}
+The most important result is also a limitation: the project is a credible operational-awareness prototype, but it is not a certified compliance product. The automated tests verify the implementation against hand-calculated and deterministic expectations. The synthetic replay verifies the data path under controlled conditions. The field-test gate remains open for fresh install, upgrade, corrupted state, missing GPS, invalid NMEA, SOG outliers, long replay, mid-year seed, year rollover, restart recovery, and CSV export scenarios in a live OpenCPN environment.
