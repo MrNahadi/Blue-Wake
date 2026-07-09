@@ -42,22 +42,31 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-## OpenCPN Wrapper Configure
+## Windows OpenCPN Wrapper Configure
 
-Once wxWidgets/OpenCPN build dependencies are installed, configure the wrapper
-with:
+The `opencpn-libs/api-21/msvc-wx32/opencpn.lib` import library is 32-bit.
+Build this wrapper with the x86 MSVC toolchain and `x86-windows` vcpkg triplet.
+
+The working local setup is:
 
 ```powershell
-cmake -S . -B build-opencpn -DEEXI_CII_BUILD_OPENCPN_PLUGIN=ON -DEEXI_CII_BUILD_TESTS=OFF
-cmake --build build-opencpn
+git clone https://github.com/microsoft/vcpkg.git C:\Users\muigu\vcpkg
+C:\Users\muigu\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+C:\Users\muigu\vcpkg\vcpkg.exe install wxwidgets:x86-windows
 ```
 
-On this machine, the configure probe currently stops at missing wxWidgets:
+Configure from a Visual Studio developer environment:
+
+```powershell
+cmd.exe /c "call ""C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat"" -arch=x86 && cmake -S . -B build-opencpn-vcpkg-x86 -G Ninja -DCMAKE_TOOLCHAIN_FILE=C:/Users/muigu/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x86-windows -DEEXI_CII_BUILD_OPENCPN_PLUGIN=ON -DEEXI_CII_BUILD_TESTS=OFF"
+cmd.exe /c "call ""C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat"" -arch=x86 && cmake --build build-opencpn-vcpkg-x86"
+```
+
+The built plugin DLL is:
 
 ```text
-Could NOT find wxWidgets
+build-opencpn-vcpkg-x86/eexi_cii_pi.dll
 ```
 
-That means the source/template side is now present, and the next environment
-step is installing/configuring wxWidgets in the same toolchain used for the
-OpenCPN plugin build.
+An x64 configure can find wxWidgets, but linking fails because the bundled
+OpenCPN import library is `x86`.
