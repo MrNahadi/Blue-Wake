@@ -11,11 +11,18 @@ The demo simulates a vessel leaving Mombasa and sends normal NMEA RMC sentences 
 1. Build and install the plugin using `docs/OpenCPN_TESTING.md`.
 2. Start OpenCPN.
 3. Open Options > Connections.
-4. Add a Network input connection:
-   - Protocol: UDP
-   - Address: `0.0.0.0` or blank, depending on the OpenCPN dialog
-   - Data port: `10110`
-   - Input filtering: off
+4. Configure a new network input connection. Some OpenCPN builds show this form
+   immediately instead of an Add button:
+   - Select Network, not Serial.
+   - Network Protocol: UDP
+   - Data Protocol: NMEA 0183
+   - Address: `0.0.0.0`
+   - DataPort: `10110`
+   - Check Receive Input on this Port.
+   - Leave Output on this port unchecked.
+   - Leave input filtering blank. The default Ignore sentences option is fine
+     when the sentence list is empty.
+   - Click OK.
 5. Open Options > Plugins and enable EEXI-CII.
 
 If the setup dialog appears, use a consistent demo profile:
