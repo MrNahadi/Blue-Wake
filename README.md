@@ -622,6 +622,11 @@ Manager import flow instead of manual copying.
 
 ## Install The Plugin Into OpenCPN
 
+OpenCPN's `Options > Plugins` page shows installed plugins and plugin-catalog
+entries. If you only see built-in/catalog plugins such as `ChartDownloader`,
+`WMM`, `Dashboard`, or `GRIB`, then Blue Wake/EEXI-CII is not installed yet.
+The `Dashboard` entry is OpenCPN's own dashboard plugin; it is not this plugin.
+
 ### Windows Manual Install
 
 Close OpenCPN first.
@@ -652,10 +657,13 @@ If you have a plugin-manager tarball:
 
 1. Start OpenCPN.
 2. Open `Options > Plugins`.
-3. Open the Plugin Manager import/install action.
-4. Select the generated `.tar.gz`.
-5. Enable the plugin.
-6. Restart OpenCPN if requested.
+3. Click `Import plugin...`.
+4. Select the generated `.tar.gz`, for example:
+   `build/package-real/eexi_cii_pi-0.1.0-local-msvc-wx32.tar.gz`.
+5. After import, find `EEXI-CII` or `Blue Wake` in the plugin list.
+6. Enable the plugin.
+7. Click `Apply` or `OK`.
+8. Restart OpenCPN if requested.
 
 The OpenCPN plugin catalog workflow expects direct import testing before
 metadata is submitted upstream.
@@ -690,7 +698,12 @@ flowchart LR
      when the sentence list is empty.
    - Click `OK`.
 4. Open `Options > Plugins`.
-5. Enable `EEXI-CII`.
+5. Enable `EEXI-CII` or `Blue Wake`.
+
+If the Plugins page only shows entries such as `ChartDownloader`, `WMM`,
+`Dashboard`, and `GRIB`, install/import the plugin first using
+[Install The Plugin Into OpenCPN](#install-the-plugin-into-opencpn). Do not
+enable OpenCPN's built-in `Dashboard` plugin expecting it to be Blue Wake.
 
 ### Use A Demo Vessel Profile
 
@@ -890,6 +903,10 @@ and:
 ```
 
 ### Plugin Does Not Appear In OpenCPN
+
+If the Plugins page only shows entries such as `ChartDownloader`, `WMM`,
+`Dashboard`, and `GRIB`, OpenCPN has not loaded Blue Wake/EEXI-CII yet.
+Install it with `Import plugin...` or copy the Windows DLLs manually.
 
 Check:
 

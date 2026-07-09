@@ -31,7 +31,9 @@ OpenCPN checks `C:\Users\muigu\AppData\Local\opencpn\plugins` before the global 
 
 1. Start OpenCPN.
 2. Open Options > Plugins.
-3. Enable the EEXI-CII plugin.
+3. Enable the EEXI-CII or Blue Wake plugin. If it is not listed and you only see
+   catalog entries such as ChartDownloader, WMM, Dashboard, and GRIB, OpenCPN has
+   not loaded the plugin yet; repeat the install step above.
 4. Complete the first-run setup dialog with test vessel values.
 5. Confirm the EEXI-CII Monitor window opens.
 6. Feed valid RMC data and confirm SOG, voyage totals, YTD totals, AER, and CII rating update.

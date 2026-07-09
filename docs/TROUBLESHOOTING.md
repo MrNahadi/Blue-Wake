@@ -2,6 +2,11 @@
 
 ## Plugin Does Not Appear In OpenCPN
 
+- If the Plugins page only shows entries such as ChartDownloader, WMM,
+  Dashboard, and GRIB, OpenCPN is working but Blue Wake/EEXI-CII is not loaded.
+  Import the plugin tarball or copy the Windows DLLs into OpenCPN's plugin
+  folder first.
+- The Dashboard entry is OpenCPN's built-in dashboard plugin, not Blue Wake.
 - Confirm the imported tarball contains `eexi_cii_pi.dll`.
 - Confirm the metadata target is `msvc-wx32` and target architecture is `x86`.
 - Check the OpenCPN log for load errors or missing runtime DLLs.

@@ -23,7 +23,12 @@ The demo simulates a vessel leaving Mombasa and sends normal NMEA RMC sentences 
    - Leave input filtering blank. The default Ignore sentences option is fine
      when the sentence list is empty.
    - Click OK.
-5. Open Options > Plugins and enable EEXI-CII.
+5. Open Options > Plugins and enable EEXI-CII or Blue Wake.
+
+If the Plugins page only shows entries such as ChartDownloader, WMM, Dashboard,
+and GRIB, the plugin has not been installed/imported yet. The Dashboard entry is
+OpenCPN's own plugin, not Blue Wake. Install Blue Wake using the README's
+Install The Plugin Into OpenCPN section, then return to this runbook.
 
 If the setup dialog appears, use a consistent demo profile:
 
