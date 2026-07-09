@@ -30,14 +30,26 @@ public:
     const eexi_cii::PluginSnapshot& latest_snapshot() const;
     eexi_cii::ProcessStatus latest_status() const;
     const wxString& latest_message() const;
+    bool setup_required() const;
 
 private:
     static eexi_cii::VesselProfile default_profile();
+    static wxString config_path();
+
+    void load_settings();
+    void save_settings();
+    void initialize_data_path();
+    void load_accumulator();
+    void save_accumulator();
 
     eexi_cii::PluginCore m_core;
+    eexi_cii::ProfileSettings m_settings;
     eexi_cii::PluginSnapshot m_latest_snapshot;
     eexi_cii::ProcessStatus m_latest_status = eexi_cii::ProcessStatus::InvalidSentence;
     wxString m_latest_message;
+    wxString m_data_dir;
+    wxString m_json_path;
+    bool m_setup_required = true;
 };
 
 extern "C" DECL_EXP opencpn_plugin* create_pi(void* plugin_manager);

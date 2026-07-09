@@ -1,11 +1,17 @@
 #include "opencpn/eexi_cii_pi.h"
 
+#include <wx/fileconf.h>
+#include <wx/filename.h>
+
+#include <exception>
+
 namespace {
 
 constexpr int kPluginVersionMajor = 0;
 constexpr int kPluginVersionMinor = 1;
 constexpr int kPluginVersionPatch = 0;
 constexpr int kPluginVersionPost = 0;
+constexpr const char* kVoyageDataFilename = "voyagedata.json";
 
 } // namespace
 
@@ -14,13 +20,22 @@ eexi_cii_pi::eexi_cii_pi(void* plugin_manager)
       m_core(default_profile()) {}
 
 int eexi_cii_pi::Init() {
+    m_latest_message.clear();
+    load_settings();
+    initialize_data_path();
+    load_accumulator();
+
     m_latest_snapshot = m_core.snapshot();
     m_latest_status = eexi_cii::ProcessStatus::InvalidSentence;
-    m_latest_message.clear();
+    if (m_setup_required && m_latest_message.empty()) {
+        m_latest_message = "Vessel profile setup required";
+    }
     return WANTS_NMEA_SENTENCES;
 }
 
 bool eexi_cii_pi::DeInit() {
+    save_settings();
+    save_accumulator();
     return true;
 }
 
@@ -69,6 +84,13 @@ wxString eexi_cii_pi::GetLongDescription() {
 }
 
 void eexi_cii_pi::SetNMEASentence(wxString& sentence) {
+    if (m_setup_required) {
+        m_latest_status = eexi_cii::ProcessStatus::Error;
+        m_latest_snapshot = m_core.snapshot();
+        m_latest_message = "Vessel profile setup required";
+        return;
+    }
+
     const auto result = m_core.process_nmea_sentence(sentence.ToStdString());
     m_latest_status = result.status;
     m_latest_snapshot = result.snapshot;
@@ -87,6 +109,10 @@ const wxString& eexi_cii_pi::latest_message() const {
     return m_latest_message;
 }
 
+bool eexi_cii_pi::setup_required() const {
+    return m_setup_required;
+}
+
 eexi_cii::VesselProfile eexi_cii_pi::default_profile() {
     eexi_cii::VesselProfile profile;
     profile.name = "Configure vessel profile";
@@ -98,6 +124,94 @@ eexi_cii::VesselProfile eexi_cii_pi::default_profile() {
     profile.fuel_type = eexi_cii::FuelType::Hfo;
     profile.displacement = 60000.0;
     return profile;
+}
+
+wxString eexi_cii_pi::config_path() {
+    return "/PlugIns/EEXI-CII";
+}
+
+void eexi_cii_pi::load_settings() {
+    wxFileConfig* config = GetOCPNConfigObject();
+    if (config == nullptr) {
+        m_settings = eexi_cii::ProfileSettings{};
+        m_setup_required = true;
+        return;
+    }
+
+    eexi_cii::SettingsMap values;
+    const eexi_cii::SettingsMap keys = eexi_cii::encode_profile_settings(eexi_cii::ProfileSettings{});
+
+    config->SetPath(config_path());
+    for (const auto& item : keys) {
+        wxString value;
+        if (config->Read(wxString::FromUTF8(item.first.c_str()), &value)) {
+            values[item.first] = value.ToStdString();
+        }
+    }
+
+    try {
+        m_settings = eexi_cii::decode_profile_settings(values);
+        m_setup_required = m_settings.setup_required();
+        if (!m_setup_required) {
+            m_core.apply_settings(m_settings);
+        }
+    } catch (const std::exception& ex) {
+        m_settings = eexi_cii::ProfileSettings{};
+        m_setup_required = true;
+        m_latest_message = wxString::FromUTF8(ex.what());
+    }
+}
+
+void eexi_cii_pi::save_settings() {
+    wxFileConfig* config = GetOCPNConfigObject();
+    if (config == nullptr) {
+        return;
+    }
+
+    config->SetPath(config_path());
+    const eexi_cii::SettingsMap values = eexi_cii::encode_profile_settings(m_settings);
+    for (const auto& item : values) {
+        config->Write(
+            wxString::FromUTF8(item.first.c_str()),
+            wxString::FromUTF8(item.second.c_str())
+        );
+    }
+    config->Flush();
+}
+
+void eexi_cii_pi::initialize_data_path() {
+    wxString* private_data_location = GetpPrivateApplicationDataLocation();
+    if (private_data_location == nullptr) {
+        return;
+    }
+
+    m_data_dir = *private_data_location + "eexi_cii_pi";
+    wxFileName::Mkdir(m_data_dir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+    m_json_path = m_data_dir + wxFileName::GetPathSeparator() + kVoyageDataFilename;
+}
+
+void eexi_cii_pi::load_accumulator() {
+    if (m_json_path.empty() || !wxFileName::FileExists(m_json_path)) {
+        return;
+    }
+
+    try {
+        m_core.load_accumulator_json(m_json_path.ToStdString());
+    } catch (const std::exception& ex) {
+        m_latest_message = wxString::FromUTF8(ex.what());
+    }
+}
+
+void eexi_cii_pi::save_accumulator() {
+    if (m_json_path.empty()) {
+        return;
+    }
+
+    try {
+        m_core.save_accumulator_json(m_json_path.ToStdString());
+    } catch (const std::exception& ex) {
+        m_latest_message = wxString::FromUTF8(ex.what());
+    }
 }
 
 extern "C" DECL_EXP opencpn_plugin* create_pi(void* plugin_manager) {
