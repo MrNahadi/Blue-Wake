@@ -5,6 +5,14 @@
 
 #include "ocpn_plugin.h"
 
+#ifndef EEXI_CII_PLUGIN_EXPORT
+#if defined(_WIN32)
+#define EEXI_CII_PLUGIN_EXPORT __declspec(dllexport)
+#else
+#define EEXI_CII_PLUGIN_EXPORT DECL_EXP
+#endif
+#endif
+
 namespace eexi_cii {
 class DashboardFrame;
 }
@@ -63,7 +71,7 @@ private:
     bool m_setup_required = true;
 };
 
-extern "C" DECL_EXP opencpn_plugin* create_pi(void* plugin_manager);
-extern "C" DECL_EXP void destroy_pi(opencpn_plugin* plugin);
+extern "C" EEXI_CII_PLUGIN_EXPORT opencpn_plugin* create_pi(void* plugin_manager);
+extern "C" EEXI_CII_PLUGIN_EXPORT void destroy_pi(opencpn_plugin* plugin);
 
 #endif

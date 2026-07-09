@@ -18,13 +18,14 @@ build-opencpn-vcpkg-x86-release\eexi_cii_pi.dll
 
 ## Install
 
-Close OpenCPN, then copy the DLL into the installed OpenCPN plugin directory:
+Close OpenCPN, then copy the DLLs into OpenCPN's per-user plugin directory:
 
 ```powershell
-Copy-Item -LiteralPath "C:\Users\muigu\Documents\Projects\EEXI-CII\build-opencpn-vcpkg-x86-release\eexi_cii_pi.dll" -Destination "C:\Program Files (x86)\OpenCPN\plugins\eexi_cii_pi.dll" -Force
+New-Item -ItemType Directory -Force -Path "C:\Users\muigu\AppData\Local\opencpn\plugins" | Out-Null
+Copy-Item -LiteralPath (Get-ChildItem "C:\Users\muigu\Documents\Projects\EEXI-CII\build-opencpn-vcpkg-x86-release" -Filter "*.dll").FullName -Destination "C:\Users\muigu\AppData\Local\opencpn\plugins" -Force
 ```
 
-`C:\Program Files (x86)\OpenCPN\plugins` requires Administrator rights on this machine, so run the copy from an elevated PowerShell window.
+OpenCPN checks `C:\Users\muigu\AppData\Local\opencpn\plugins` before the global `C:\Program Files (x86)\OpenCPN\plugins` folder, and the per-user folder does not require Administrator rights.
 
 ## Smoke Test
 

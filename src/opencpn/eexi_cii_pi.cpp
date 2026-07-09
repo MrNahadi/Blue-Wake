@@ -290,10 +290,10 @@ void eexi_cii_pi::close_dashboard() {
     }
 }
 
-extern "C" DECL_EXP opencpn_plugin* create_pi(void* plugin_manager) {
+extern "C" EEXI_CII_PLUGIN_EXPORT opencpn_plugin* create_pi(void* plugin_manager) {
     return new eexi_cii_pi(plugin_manager);
 }
 
-extern "C" DECL_EXP void destroy_pi(opencpn_plugin* plugin) {
+extern "C" EEXI_CII_PLUGIN_EXPORT void destroy_pi(opencpn_plugin* plugin) {
     delete plugin;
 }
