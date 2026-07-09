@@ -1,5 +1,6 @@
 #include "opencpn/eexi_cii_pi.h"
 
+#include "ui/dashboard_panel.h"
 #include "ui/setup_dialog.h"
 
 #include <wx/fileconf.h>
@@ -38,12 +39,15 @@ int eexi_cii_pi::Init() {
 bool eexi_cii_pi::DeInit() {
     save_settings();
     save_accumulator();
+    close_dashboard();
     return true;
 }
 
 void eexi_cii_pi::LateInit() {
     if (m_setup_required) {
         ShowPreferencesDialog(GetOCPNCanvasWindow());
+    } else {
+        show_dashboard(GetOCPNCanvasWindow());
     }
 }
 
@@ -100,6 +104,7 @@ void eexi_cii_pi::ShowPreferencesDialog(wxWindow* parent) {
     try {
         apply_settings(dialog.settings());
         save_settings();
+        show_dashboard(parent);
     } catch (const std::exception& ex) {
         m_setup_required = true;
         m_latest_status = eexi_cii::ProcessStatus::Error;
@@ -119,6 +124,7 @@ void eexi_cii_pi::SetNMEASentence(wxString& sentence) {
     m_latest_status = result.status;
     m_latest_snapshot = result.snapshot;
     m_latest_message = wxString::FromUTF8(result.message.c_str());
+    update_dashboard();
 }
 
 const eexi_cii::PluginSnapshot& eexi_cii_pi::latest_snapshot() const {
@@ -245,6 +251,43 @@ void eexi_cii_pi::apply_settings(const eexi_cii::ProfileSettings& settings) {
     m_latest_snapshot = m_core.snapshot();
     m_latest_status = eexi_cii::ProcessStatus::InvalidSentence;
     m_latest_message.clear();
+    update_dashboard();
+}
+
+void eexi_cii_pi::show_dashboard(wxWindow* parent) {
+    if (m_setup_required) {
+        return;
+    }
+
+    if (m_dashboard == nullptr) {
+        m_dashboard = new eexi_cii::DashboardFrame(parent);
+        m_dashboard->Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
+            if (event.CanVeto() && m_dashboard != nullptr) {
+                m_dashboard->Hide();
+                event.Veto();
+                return;
+            }
+            m_dashboard = nullptr;
+            event.Skip();
+        });
+    }
+
+    update_dashboard();
+    m_dashboard->Show();
+    m_dashboard->Raise();
+}
+
+void eexi_cii_pi::update_dashboard() {
+    if (m_dashboard != nullptr) {
+        m_dashboard->update(m_latest_snapshot, m_latest_status, m_latest_message);
+    }
+}
+
+void eexi_cii_pi::close_dashboard() {
+    if (m_dashboard != nullptr) {
+        m_dashboard->Destroy();
+        m_dashboard = nullptr;
+    }
 }
 
 extern "C" DECL_EXP opencpn_plugin* create_pi(void* plugin_manager) {

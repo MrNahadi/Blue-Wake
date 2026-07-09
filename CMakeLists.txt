@@ -121,6 +121,7 @@ if(EEXI_CII_BUILD_OPENCPN_PLUGIN)
 
     add_library(eexi_cii_pi MODULE
         src/opencpn/eexi_cii_pi.cpp
+        src/ui/dashboard_panel.cpp
         src/ui/setup_dialog.cpp
     )
 

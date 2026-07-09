@@ -5,6 +5,10 @@
 
 #include "ocpn_plugin.h"
 
+namespace eexi_cii {
+class DashboardFrame;
+}
+
 class eexi_cii_pi final : public opencpn_plugin_121 {
 public:
     explicit eexi_cii_pi(void* plugin_manager);
@@ -44,9 +48,13 @@ private:
     void load_accumulator();
     void save_accumulator();
     void apply_settings(const eexi_cii::ProfileSettings& settings);
+    void show_dashboard(wxWindow* parent);
+    void update_dashboard();
+    void close_dashboard();
 
     eexi_cii::PluginCore m_core;
     eexi_cii::ProfileSettings m_settings;
+    eexi_cii::DashboardFrame* m_dashboard = nullptr;
     eexi_cii::PluginSnapshot m_latest_snapshot;
     eexi_cii::ProcessStatus m_latest_status = eexi_cii::ProcessStatus::InvalidSentence;
     wxString m_latest_message;
